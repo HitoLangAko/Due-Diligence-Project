@@ -3,6 +3,7 @@ const mysql = require("mysql2");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const session = require("express-session");
+const ExcelJS = require("exceljs");
 
 const app = express();
 
@@ -52,14 +53,19 @@ function requireRole(role) {
     }
 
     if (req.session.user.role !== role) {
-      return res.status(403).json({ message: "You are not allowed to do this action." });
+      return res.status(403).json({
+        message: "You are not allowed to do this action."
+      });
     }
 
     next();
   };
 }
 
-// REGISTER
+/* =========================
+   AUTH ROUTES
+========================= */
+
 app.post("/register", async (req, res) => {
   const { full_name, email, password, role } = req.body;
 
@@ -90,14 +96,15 @@ app.post("/register", async (req, res) => {
         return res.status(500).json({ message: "Failed to register account." });
       }
 
-      res.json({ message: "Account registered successfully. You can now log in." });
+      res.json({
+        message: "Account registered successfully. You can now log in."
+      });
     });
   } catch (error) {
     res.status(500).json({ message: "Server error during registration." });
   }
 });
 
-// LOGIN
 app.post("/login", (req, res) => {
   const { email, password } = req.body;
 
@@ -138,7 +145,6 @@ app.post("/login", (req, res) => {
   });
 });
 
-// CURRENT USER
 app.get("/me", (req, res) => {
   if (!req.session.user) {
     return res.status(401).json({ message: "Not logged in." });
@@ -147,14 +153,16 @@ app.get("/me", (req, res) => {
   res.json(req.session.user);
 });
 
-// LOGOUT
 app.post("/logout", (req, res) => {
   req.session.destroy(() => {
     res.json({ message: "Logged out successfully." });
   });
 });
 
-// SAVE VENDOR
+/* =========================
+   VENDOR ROUTES
+========================= */
+
 app.post("/vendors", requireLogin, (req, res) => {
   const {
     company_name,
@@ -202,7 +210,6 @@ app.post("/vendors", requireLogin, (req, res) => {
   );
 });
 
-// GET VENDORS
 app.get("/vendors", requireLogin, (req, res) => {
   const sql = "SELECT * FROM vendors ORDER BY created_at DESC";
 
@@ -216,7 +223,10 @@ app.get("/vendors", requireLogin, (req, res) => {
   });
 });
 
-// CREATE ASSESSMENT
+/* =========================
+   ASSESSMENT ROUTES
+========================= */
+
 app.post("/assessments", requireLogin, (req, res) => {
   const { vendor_id, assessment_date, purpose } = req.body;
 
@@ -239,7 +249,6 @@ app.post("/assessments", requireLogin, (req, res) => {
   });
 });
 
-// GET ASSESSMENTS
 app.get("/assessments", requireLogin, (req, res) => {
   const sql = `
     SELECT
@@ -264,7 +273,6 @@ app.get("/assessments", requireLogin, (req, res) => {
   });
 });
 
-// GET ONE ASSESSMENT WITH ANSWERS
 app.get("/assessments/:assessment_id/answers", requireLogin, (req, res) => {
   const { assessment_id } = req.params;
 
@@ -274,8 +282,6 @@ app.get("/assessments/:assessment_id/answers", requireLogin, (req, res) => {
       a.status,
       ans.question_id,
       ans.vendor_response,
-      ans.vendor_comment,
-      ans.company_response,
       ans.company_comment
     FROM assessments a
     LEFT JOIN answers ans ON a.assessment_id = ans.assessment_id
@@ -285,7 +291,9 @@ app.get("/assessments/:assessment_id/answers", requireLogin, (req, res) => {
   db.query(sql, [assessment_id], (err, rows) => {
     if (err) {
       console.error("Fetch assessment answers error:", err);
-      return res.status(500).json({ message: "Failed to fetch assessment answers." });
+      return res.status(500).json({
+        message: "Failed to fetch assessment answers."
+      });
     }
 
     if (rows.length === 0) {
@@ -300,15 +308,76 @@ app.get("/assessments/:assessment_id/answers", requireLogin, (req, res) => {
         .map((row) => ({
           question_id: row.question_id,
           vendor_response: row.vendor_response,
-          vendor_comment: row.vendor_comment,
-          company_response: row.company_response,
           company_comment: row.company_comment
         }))
     });
   });
 });
 
-// GET QUESTIONS
+app.patch("/assessments/:assessment_id/submit", requireRole("vendor"), (req, res) => {
+  const { assessment_id } = req.params;
+
+  const sql = `
+    UPDATE assessments
+    SET status = 'Submitted'
+    WHERE assessment_id = ?
+    AND status = 'Draft'
+  `;
+
+  db.query(sql, [assessment_id], (err, result) => {
+    if (err) {
+      console.error("Submit assessment error:", err);
+      return res.status(500).json({
+        message: "Failed to submit vendor answers."
+      });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(400).json({
+        message: "Only draft assessments can be submitted."
+      });
+    }
+
+    res.json({
+      message: "Vendor answers submitted. Company review is now enabled."
+    });
+  });
+});
+
+app.patch("/assessments/:assessment_id/reviewed", requireRole("company_employee"), (req, res) => {
+  const { assessment_id } = req.params;
+
+  const sql = `
+    UPDATE assessments
+    SET status = 'Reviewed'
+    WHERE assessment_id = ?
+    AND status = 'Submitted'
+  `;
+
+  db.query(sql, [assessment_id], (err, result) => {
+    if (err) {
+      console.error("Mark reviewed error:", err);
+      return res.status(500).json({
+        message: "Failed to mark assessment as reviewed."
+      });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(400).json({
+        message: "Only submitted assessments can be marked as reviewed."
+      });
+    }
+
+    res.json({
+      message: "Assessment marked as reviewed. Export is now available."
+    });
+  });
+});
+
+/* =========================
+   QUESTIONS ROUTE
+========================= */
+
 app.get("/sections-with-questions", requireLogin, (req, res) => {
   const sql = `
     SELECT
@@ -356,7 +425,10 @@ app.get("/sections-with-questions", requireLogin, (req, res) => {
   });
 });
 
-// VENDOR SAVE DRAFT ANSWERS
+/* =========================
+   ANSWER ROUTES
+========================= */
+
 app.post("/answers/vendor-save", requireRole("vendor"), (req, res) => {
   const { assessment_id, answers } = req.body;
 
@@ -385,14 +457,15 @@ app.post("/answers/vendor-save", requireRole("vendor"), (req, res) => {
     }
 
     if (results[0].status !== "Draft") {
-      return res.status(403).json({ message: "Vendor answers were already submitted and can no longer be edited." });
+      return res.status(403).json({
+        message: "Vendor answers were already submitted and can no longer be edited."
+      });
     }
 
     const values = answers.map((answer) => [
       assessment_id,
       answer.question_id,
-      answer.vendor_response || null,
-      answer.vendor_comment || null
+      answer.company_comment || null
     ]);
 
     const sql = `
@@ -400,20 +473,20 @@ app.post("/answers/vendor-save", requireRole("vendor"), (req, res) => {
       (
         assessment_id,
         question_id,
-        vendor_response,
-        vendor_comment
+        vendor_response
       )
       VALUES ?
       ON DUPLICATE KEY UPDATE
         vendor_response = VALUES(vendor_response),
-        vendor_comment = VALUES(vendor_comment),
         answered_at = CURRENT_TIMESTAMP
     `;
 
     db.query(sql, [values], (err) => {
       if (err) {
         console.error("Save vendor answers error:", err);
-        return res.status(500).json({ message: "Failed to save vendor answers." });
+        return res.status(500).json({
+          message: "Failed to save vendor answers."
+        });
       }
 
       res.json({ message: "Vendor answers saved as draft." });
@@ -421,25 +494,381 @@ app.post("/answers/vendor-save", requireRole("vendor"), (req, res) => {
   });
 });
 
-// VENDOR SUBMIT ANSWERS
-app.patch("/assessments/:assessment_id/submit", requireRole("vendor"), (req, res) => {
-  const { assessment_id } = req.params;
+app.post("/answers/company-review", requireRole("company_employee"), (req, res) => {
+  const { assessment_id, answers } = req.body;
 
-  const sql = `
-    UPDATE assessments
-    SET status = 'Submitted'
+  if (!assessment_id || !Array.isArray(answers)) {
+    return res.status(400).json({ message: "Invalid company review data." });
+  }
+
+  if (answers.length === 0) {
+    return res.status(400).json({ message: "No company review to save." });
+  }
+
+  const checkStatusSql = `
+    SELECT status
+    FROM assessments
     WHERE assessment_id = ?
   `;
 
-  db.query(sql, [assessment_id], (err) => {
+  db.query(checkStatusSql, [assessment_id], (err, results) => {
     if (err) {
-      console.error("Submit assessment error:", err);
-      return res.status(500).json({ message: "Failed to submit vendor answers." });
+      console.error("Check assessment status error:", err);
+      return res.status(500).json({
+        message: "Failed to check assessment status."
+      });
     }
 
-    res.json({ message: "Vendor answers submitted. Company review is now enabled." });
+    if (results.length === 0) {
+      return res.status(404).json({ message: "Assessment not found." });
+    }
+
+    if (results[0].status === "Draft") {
+      return res.status(403).json({
+        message: "Company review is locked. Vendor must submit answers first."
+      });
+    }
+
+    const values = answers.map((answer) => [
+      assessment_id,
+      answer.question_id,
+      answer.company_comment || null
+    ]);
+
+    const saveReviewSql = `
+      INSERT INTO answers
+      (
+        assessment_id,
+        question_id,
+        company_comment
+      )
+      VALUES ?
+      ON DUPLICATE KEY UPDATE
+        company_comment = VALUES(company_comment),
+        reviewed_at = CURRENT_TIMESTAMP
+    `;
+
+    db.query(saveReviewSql, [values], (err) => {
+      if (err) {
+        console.error("Save company review error:", err);
+        return res.status(500).json({
+          message: "Failed to save company review."
+        });
+      }
+
+      res.json({ message: "Company review saved successfully." });
+    });
   });
 });
+
+/* =========================
+   SIGN-OFF ROUTES
+========================= */
+
+app.get("/signoffs/:assessment_id", requireLogin, (req, res) => {
+  const { assessment_id } = req.params;
+
+  const sql = `
+    SELECT *
+    FROM sign_offs
+    WHERE assessment_id = ?
+    ORDER BY FIELD(
+      role_name,
+      'Business Unit Representative',
+      'Risk Management Officer',
+      'HR',
+      'IT Compliance',
+      'InfoSec',
+      'DPO'
+    )
+  `;
+
+  db.query(sql, [assessment_id], (err, results) => {
+    if (err) {
+      console.error("Fetch signoffs error:", err);
+      return res.status(500).json({
+        message: "Failed to fetch sign-offs."
+      });
+    }
+
+    res.json(results);
+  });
+});
+
+app.post("/signoffs", requireRole("company_employee"), (req, res) => {
+  const { assessment_id, signoffs } = req.body;
+
+  if (!assessment_id || !Array.isArray(signoffs)) {
+    return res.status(400).json({ message: "Invalid sign-off data." });
+  }
+
+  if (signoffs.length === 0) {
+    return res.status(400).json({ message: "No sign-off data to save." });
+  }
+
+  const values = signoffs.map((item) => [
+    assessment_id,
+    item.role_name,
+    item.signer_name || null,
+    item.signoff_status || "Pending",
+    item.signoff_status === "Signed" ? new Date() : null
+  ]);
+
+  const sql = `
+    INSERT INTO sign_offs
+    (
+      assessment_id,
+      role_name,
+      signer_name,
+      signoff_status,
+      signed_at
+    )
+    VALUES ?
+    ON DUPLICATE KEY UPDATE
+      signer_name = VALUES(signer_name),
+      signoff_status = VALUES(signoff_status),
+      signed_at = VALUES(signed_at)
+  `;
+
+  db.query(sql, [values], (err) => {
+    if (err) {
+      console.error("Save signoffs error:", err);
+      return res.status(500).json({
+        message: "Failed to save sign-offs."
+      });
+    }
+
+    res.json({ message: "Sign-off sheet saved successfully." });
+  });
+});
+
+/* =========================
+   EXPORT ROUTE
+========================= */
+
+app.get("/export/:assessment_id", requireLogin, async (req, res) => {
+  const { assessment_id } = req.params;
+
+  const assessmentSql = `
+    SELECT
+      a.assessment_id,
+      a.assessment_date,
+      a.purpose,
+      a.status,
+      v.company_name,
+      v.company_website,
+      v.product_services_offered,
+      v.contact_person_name,
+      v.contact_email,
+      v.contact_phone
+    FROM assessments a
+    JOIN vendors v ON a.vendor_id = v.vendor_id
+    WHERE a.assessment_id = ?
+  `;
+
+  const answersSql = `
+    SELECT
+      qs.tab_name,
+      qs.section_name,
+      q.question_text,
+      q.response_type,
+      q.is_required,
+      ans.vendor_response,
+      ans.company_comment
+    FROM question_sections qs
+    JOIN questions q ON qs.section_id = q.section_id
+    LEFT JOIN answers ans
+      ON q.question_id = ans.question_id
+      AND ans.assessment_id = ?
+    WHERE qs.tab_name IN ('Due Diligence Form', 'Information Security')
+    ORDER BY qs.section_id, q.question_id
+  `;
+
+  const signoffSql = `
+    SELECT
+      role_name,
+      signer_name,
+      signoff_status,
+      signed_at
+    FROM sign_offs
+    WHERE assessment_id = ?
+    ORDER BY FIELD(
+      role_name,
+      'Business Unit Representative',
+      'Risk Management Officer',
+      'HR',
+      'IT Compliance',
+      'InfoSec',
+      'DPO'
+    )
+  `;
+
+  db.query(assessmentSql, [assessment_id], (assessmentErr, assessmentRows) => {
+    if (assessmentErr) {
+      console.error("Export assessment error:", assessmentErr);
+      return res.status(500).json({
+        message: "Failed to export assessment."
+      });
+    }
+
+    if (assessmentRows.length === 0) {
+      return res.status(404).json({ message: "Assessment not found." });
+    }
+
+    const assessment = assessmentRows[0];
+
+    if (assessment.status !== "Reviewed" && assessment.status !== "Approved") {
+      return res.status(403).json({
+        message: "Export is locked until the company review and sign-off are completed."
+      });
+    }
+
+    db.query(answersSql, [assessment_id], (answersErr, answerRows) => {
+      if (answersErr) {
+        console.error("Export answers error:", answersErr);
+        return res.status(500).json({
+          message: "Failed to export answers."
+        });
+      }
+
+      db.query(signoffSql, [assessment_id], async (signoffErr, signoffRows) => {
+        if (signoffErr) {
+          console.error("Export signoffs error:", signoffErr);
+          return res.status(500).json({
+            message: "Failed to export sign-offs."
+          });
+        }
+
+        const workbook = new ExcelJS.Workbook();
+        workbook.creator = "Vendor Due Diligence System";
+
+        createAnswerSheet(workbook, "Due Diligence Form", assessment, answerRows);
+        createAnswerSheet(workbook, "Information Security", assessment, answerRows);
+        createSignoffSheet(workbook, assessment, signoffRows);
+
+        res.setHeader(
+          "Content-Type",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+
+        res.setHeader(
+          "Content-Disposition",
+          `attachment; filename=assessment_${assessment_id}_export.xlsx`
+        );
+
+        await workbook.xlsx.write(res);
+        res.end();
+      });
+    });
+  });
+});
+
+function createAnswerSheet(workbook, tabName, assessment, rows) {
+  const sheet = workbook.addWorksheet(tabName);
+
+  sheet.columns = [
+    { header: "Section", key: "section_name", width: 35 },
+    { header: "Question", key: "question_text", width: 70 },
+    { header: "Response Type", key: "response_type", width: 18 },
+    { header: "Required", key: "is_required", width: 12 },
+    { header: "Vendor Response", key: "vendor_response", width: 35 },
+    { header: "Company Comment", key: "company_comment", width: 45 }
+  ];
+
+  sheet.insertRow(1, [`${tabName}`]);
+  sheet.insertRow(2, [`Company Name: ${assessment.company_name}`]);
+  sheet.insertRow(3, [`Website: ${assessment.company_website || "N/A"}`]);
+  sheet.insertRow(4, [`Product/Services: ${assessment.product_services_offered || "N/A"}`]);
+  sheet.insertRow(5, [`Assessment ID: ${assessment.assessment_id}`]);
+  sheet.insertRow(6, [`Assessment Date: ${assessment.assessment_date || "N/A"}`]);
+  sheet.insertRow(7, [`Purpose: ${assessment.purpose || "N/A"}`]);
+  sheet.insertRow(8, [`Status: ${assessment.status}`]);
+  sheet.insertRow(9, []);
+
+  const filteredRows = rows.filter((row) => row.tab_name === tabName);
+
+  filteredRows.forEach((row) => {
+    sheet.addRow({
+      section_name: row.section_name,
+      question_text: row.question_text,
+      response_type: row.response_type,
+      is_required: row.is_required ? "Yes" : "No",
+      vendor_response: row.vendor_response || "",
+      company_comment: row.company_comment || ""
+    });
+  });
+
+  sheet.getRow(10).font = { bold: true };
+
+  sheet.eachRow((row) => {
+    row.eachCell((cell) => {
+      cell.alignment = {
+        vertical: "top",
+        wrapText: true
+      };
+    });
+  });
+}
+
+function createSignoffSheet(workbook, assessment, signoffs) {
+  const sheet = workbook.addWorksheet("Sign-off Sheet");
+
+  sheet.columns = [
+    { header: "Role", key: "role_name", width: 35 },
+    { header: "Signer Name", key: "signer_name", width: 35 },
+    { header: "Status", key: "signoff_status", width: 18 },
+    { header: "Signed At", key: "signed_at", width: 25 }
+  ];
+
+  sheet.insertRow(1, ["VENDOR / IT SUPPLIER DUE DILIGENCE FORM"]);
+  sheet.insertRow(2, ["SIGN-OFF SHEET"]);
+  sheet.insertRow(3, [`Company Name: ${assessment.company_name}`]);
+  sheet.insertRow(4, [`Assessment ID: ${assessment.assessment_id}`]);
+  sheet.insertRow(5, [`Status: ${assessment.status}`]);
+  sheet.insertRow(6, []);
+
+  const defaultRoles = [
+    "Business Unit Representative",
+    "Risk Management Officer",
+    "HR",
+    "IT Compliance",
+    "InfoSec",
+    "DPO"
+  ];
+
+  const signoffMap = {};
+
+  signoffs.forEach((item) => {
+    signoffMap[item.role_name] = item;
+  });
+
+  defaultRoles.forEach((role) => {
+    const item = signoffMap[role] || {};
+
+    sheet.addRow({
+      role_name: role,
+      signer_name: item.signer_name || "",
+      signoff_status: item.signoff_status || "Pending",
+      signed_at: item.signed_at || ""
+    });
+  });
+
+  sheet.addRow([]);
+  sheet.addRow([
+    "Disclaimer: All identified risks, findings, and recommended controls are based on the disclosure of the Vendor/IT supplier with the supervision of the requesting unit based on the initial questionnaire submitted."
+  ]);
+
+  sheet.getRow(7).font = { bold: true };
+
+  sheet.eachRow((row) => {
+    row.eachCell((cell) => {
+      cell.alignment = {
+        vertical: "top",
+        wrapText: true
+      };
+    });
+  });
+}
 
 // COMPANY SAVE REVIEW
 app.post("/answers/company-review", requireRole("company_employee"), (req, res) => {
@@ -462,7 +891,9 @@ app.post("/answers/company-review", requireRole("company_employee"), (req, res) 
   db.query(checkStatusSql, [assessment_id], (err, results) => {
     if (err) {
       console.error("Check assessment status error:", err);
-      return res.status(500).json({ message: "Failed to check assessment status." });
+      return res.status(500).json({
+        message: "Failed to check assessment status."
+      });
     }
 
     if (results.length === 0) {
@@ -476,35 +907,40 @@ app.post("/answers/company-review", requireRole("company_employee"), (req, res) 
     }
 
     const values = answers.map((answer) => [
-    assessment_id,
-    answer.question_id,
-    answer.company_comment || null
+      assessment_id,
+      answer.question_id,
+      answer.company_comment || null
     ]);
 
     const saveReviewSql = `
-  INSERT INTO answers
-  (
-    assessment_id,
-    question_id,
-    company_comment,
-    reviewed_at
-  )
-  VALUES ?
-  ON DUPLICATE KEY UPDATE
-    company_comment = VALUES(company_comment),
-    reviewed_at = CURRENT_TIMESTAMP
-`;
+      INSERT INTO answers
+      (
+        assessment_id,
+        question_id,
+        company_comment
+      )
+      VALUES ?
+      ON DUPLICATE KEY UPDATE
+        company_comment = VALUES(company_comment),
+        reviewed_at = CURRENT_TIMESTAMP
+    `;
 
     db.query(saveReviewSql, [values], (err) => {
       if (err) {
         console.error("Save company review error:", err);
-        return res.status(500).json({ message: "Failed to save company review." });
+        return res.status(500).json({
+          message: "Failed to save company review."
+        });
       }
 
       res.json({ message: "Company review saved successfully." });
     });
   });
 });
+
+/* =========================
+   START SERVER
+========================= */
 
 app.listen(3000, () => {
   console.log("Server running at http://localhost:3000");

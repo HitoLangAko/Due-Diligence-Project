@@ -97,34 +97,65 @@
       </select>
 
       <p id="currentAssessment" class="notice">No active assessment selected.</p>
+      <button type="button" id="exportExcelBtn">
+        Export Assessment to Excel
+      </button>
     </section>
 
     <section class="card">
-      <h2>3. Questionnaire</h2>
-      <p class="helper" id="questionnaireHelper">
-        Select or create an assessment first.
+  <h2>3. Questionnaire</h2>
+  <p class="helper" id="questionnaireHelper">
+    Select or create an assessment first.
+  </p>
+
+  <form id="questionnaireForm">
+
+    <div class="form-tabs">
+      <button type="button" class="form-tab active" data-tab="Due Diligence Form">
+        Due Diligence Form
+      </button>
+
+      <button type="button" class="form-tab" data-tab="Information Security">
+        Information Security
+      </button>
+
+      <button type="button" class="form-tab" data-tab="Sign-off Sheet">
+        Sign-off Sheet
+      </button>
+    </div>
+
+    <div id="questionsContainer"></div>
+
+    <div id="signoffContainer" class="hidden">
+      <h3>Sign-off Sheet</h3>
+      <p class="helper">
+        Company employees can complete the sign-off sheet after reviewing the assessment.
       </p>
 
-      <form id="questionnaireForm">
-        <div id="questionsContainer"></div>
+      <div id="signoffFields"></div>
 
-        <div class="vendor-actions">
-          <button type="button" id="saveVendorAnswersBtn" class="save-all-btn">
-            Save Vendor Draft Answers
-          </button>
+      <button type="button" id="saveSignoffBtn" class="company-btn">
+        Save Sign-off Sheet
+      </button>
+    </div>
 
-          <button type="button" id="submitVendorAnswersBtn">
-            Submit Vendor Answers
-          </button>
-        </div>
+    <div class="vendor-actions">
+      <button type="button" id="saveVendorAnswersBtn" class="save-all-btn">
+        Save Vendor Draft Answers
+      </button>
 
-        <div class="company-actions">
-          <button type="button" id="saveCompanyReviewBtn" class="company-btn">
-            Save Company Review
-          </button>
-        </div>
-      </form>
-    </section>
+      <button type="button" id="submitVendorAnswersBtn">
+        Submit Vendor Answers
+      </button>
+    </div>
+
+    <div class="company-actions">
+      <button type="button" id="saveCompanyReviewBtn" class="company-btn">
+        Save Company Review
+      </button>
+    </div>
+  </form>
+</section>
 
     <section class="card vendor-only">
       <h2>4. Saved Vendors</h2>

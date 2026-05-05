@@ -6,7 +6,6 @@ const questionnaireHelper = document.querySelector("#questionnaireHelper");
 
 const vendorForm = document.querySelector("#vendorForm");
 const assessmentForm = document.querySelector("#assessmentForm");
-const questionnaireForm = document.querySelector("#questionnaireForm");
 
 const saveVendorAnswersBtn = document.querySelector("#saveVendorAnswersBtn");
 const submitVendorAnswersBtn = document.querySelector("#submitVendorAnswersBtn");
@@ -19,10 +18,44 @@ const questionsContainer = document.querySelector("#questionsContainer");
 const currentAssessment = document.querySelector("#currentAssessment");
 const assessmentList = document.querySelector("#assessmentList");
 
+const formTabs = document.querySelectorAll(".form-tab");
+const signoffContainer = document.querySelector("#signoffContainer");
+const signoffFields = document.querySelector("#signoffFields");
+const saveSignoffBtn = document.querySelector("#saveSignoffBtn");
+const exportExcelBtn = document.querySelector("#exportExcelBtn");
+
 let currentUser = null;
 let activeAssessmentId = null;
 let activeAssessmentStatus = null;
 let loadedAnswers = {};
+let activeFormTab = "Due Diligence Form";
+
+/* =========================
+   TAB SWITCHING
+========================= */
+
+formTabs.forEach((button) => {
+  button.addEventListener("click", () => {
+    formTabs.forEach((btn) => btn.classList.remove("active"));
+    button.classList.add("active");
+
+    activeFormTab = button.dataset.tab;
+
+    if (activeFormTab === "Sign-off Sheet") {
+      questionsContainer.classList.add("hidden");
+      signoffContainer.classList.remove("hidden");
+      loadSignoffs();
+    } else {
+      signoffContainer.classList.add("hidden");
+      questionsContainer.classList.remove("hidden");
+      loadQuestions();
+    }
+  });
+});
+
+/* =========================
+   LOGIN / ROLE
+========================= */
 
 async function checkLogin() {
   const response = await fetch("/me");
@@ -47,7 +80,8 @@ function applyRoleView() {
   const companyActions = document.querySelector(".company-actions");
 
   if (currentUser.role === "vendor") {
-    roleHelper.textContent = "Vendor page: answer the vendor questionnaire and submit it for company review.";
+    roleHelper.textContent =
+      "Vendor page: answer the vendor questionnaire and submit it for company review.";
 
     vendorOnlyElements.forEach((element) => {
       element.classList.remove("hidden");
@@ -56,7 +90,8 @@ function applyRoleView() {
     vendorActions.classList.remove("hidden");
     companyActions.classList.add("hidden");
   } else {
-    roleHelper.textContent = "Company employee page: review submitted vendor assessments.";
+    roleHelper.textContent =
+      "Company employee page: review submitted vendor assessments.";
 
     vendorOnlyElements.forEach((element) => {
       element.classList.add("hidden");
@@ -74,6 +109,10 @@ logoutBtn.addEventListener("click", async () => {
 
   window.location.href = "/login.html";
 });
+
+/* =========================
+   VENDOR FORM
+========================= */
 
 if (vendorForm) {
   vendorForm.addEventListener("submit", async function (e) {
@@ -106,6 +145,10 @@ if (vendorForm) {
   });
 }
 
+/* =========================
+   ASSESSMENT FORM
+========================= */
+
 if (assessmentForm) {
   assessmentForm.addEventListener("submit", async function (e) {
     e.preventDefault();
@@ -125,7 +168,6 @@ if (assessmentForm) {
     });
 
     const result = await response.json();
-
     alert(result.message);
 
     if (response.ok) {
@@ -138,6 +180,10 @@ if (assessmentForm) {
       await loadAssessments();
       await loadAssessmentAnswers(activeAssessmentId);
       applyFieldPermissions();
+
+      if (activeFormTab === "Sign-off Sheet") {
+        loadSignoffs();
+      }
     }
   });
 }
@@ -150,15 +196,30 @@ assessmentSelect.addEventListener("change", async function () {
     activeAssessmentStatus = null;
     currentAssessment.textContent = "No active assessment selected.";
     loadedAnswers = {};
+
     renderLoadedAnswers();
     applyFieldPermissions();
+
+    if (activeFormTab === "Sign-off Sheet") {
+      loadSignoffs();
+    }
+
     return;
   }
 
   activeAssessmentId = selectedId;
+
   await loadAssessmentAnswers(activeAssessmentId);
   applyFieldPermissions();
+
+  if (activeFormTab === "Sign-off Sheet") {
+    loadSignoffs();
+  }
 });
+
+/* =========================
+   VENDOR ANSWERS
+========================= */
 
 saveVendorAnswersBtn.addEventListener("click", async function () {
   if (!activeAssessmentId) {
@@ -221,6 +282,10 @@ submitVendorAnswersBtn.addEventListener("click", async function () {
   }
 });
 
+/* =========================
+   COMPANY REVIEW
+========================= */
+
 saveCompanyReviewBtn.addEventListener("click", async function () {
   if (!activeAssessmentId) {
     alert("Select an assessment first.");
@@ -235,7 +300,7 @@ saveCompanyReviewBtn.addEventListener("click", async function () {
   const answers = collectCompanyReviews();
 
   if (answers.length === 0) {
-    alert("Please add at least one company review.");
+    alert("Please add at least one company comment.");
     return;
   }
 
@@ -257,6 +322,10 @@ saveCompanyReviewBtn.addEventListener("click", async function () {
     await loadAssessmentAnswers(activeAssessmentId);
   }
 });
+
+/* =========================
+   LOAD VENDORS
+========================= */
 
 async function loadVendors() {
   const response = await fetch("/vendors");
@@ -302,6 +371,10 @@ async function loadVendors() {
   });
 }
 
+/* =========================
+   LOAD ASSESSMENTS
+========================= */
+
 async function loadAssessments() {
   const response = await fetch("/assessments");
 
@@ -342,6 +415,10 @@ async function loadAssessments() {
   }
 }
 
+/* =========================
+   LOAD QUESTIONS BY TAB
+========================= */
+
 async function loadQuestions() {
   const response = await fetch("/sections-with-questions");
 
@@ -352,7 +429,7 @@ async function loadQuestions() {
   questionsContainer.innerHTML = "";
 
   sections.forEach((section) => {
-    if (section.tab_name === "Sign-off Sheet") {
+    if (section.tab_name !== activeFormTab) {
       return;
     }
 
@@ -376,6 +453,7 @@ async function loadQuestions() {
     questionsContainer.appendChild(sectionBlock);
   });
 
+  renderLoadedAnswers();
   applyFieldPermissions();
 }
 
@@ -428,6 +506,10 @@ function createVendorResponseInput(question) {
   return `<textarea class="vendor-response" placeholder="Vendor response"></textarea>`;
 }
 
+/* =========================
+   LOAD ANSWERS
+========================= */
+
 async function loadAssessmentAnswers(assessmentId) {
   const response = await fetch(`/assessments/${assessmentId}/answers`);
 
@@ -467,6 +549,10 @@ function renderLoadedAnswers() {
   });
 }
 
+/* =========================
+   COLLECT ANSWERS
+========================= */
+
 function collectVendorAnswers() {
   const questionCards = document.querySelectorAll(".question-card");
   const answers = [];
@@ -505,6 +591,10 @@ function collectCompanyReviews() {
   return answers;
 }
 
+/* =========================
+   FIELD PERMISSIONS
+========================= */
+
 function applyFieldPermissions() {
   const vendorResponses = document.querySelectorAll(".vendor-response");
   const companyComments = document.querySelectorAll(".company-comment");
@@ -528,21 +618,25 @@ function applyFieldPermissions() {
       saveVendorAnswersBtn.disabled = false;
       submitVendorAnswersBtn.disabled = false;
 
-      questionnaireHelper.textContent = "Vendor mode: fill in your responses, save drafts, then submit.";
+      questionnaireHelper.textContent =
+        "Vendor mode: fill in your responses, save drafts, then submit.";
     } else {
-      questionnaireHelper.textContent = "Vendor mode: this assessment was already submitted. Vendor fields are locked.";
+      questionnaireHelper.textContent =
+        "Vendor mode: this assessment was already submitted. Vendor fields are locked.";
     }
   }
 
   if (currentUser.role === "company_employee") {
     if (activeAssessmentStatus === "Draft") {
-      questionnaireHelper.textContent = "Company mode: review is locked until the vendor submits the assessment.";
+      questionnaireHelper.textContent =
+        "Company mode: review is locked until the vendor submits the assessment.";
     } else {
       companyComments.forEach((field) => setDisabled(field, false));
 
       saveCompanyReviewBtn.disabled = false;
 
-      questionnaireHelper.textContent = "Company mode: vendor submitted the assessment. You may now add company comments.";
+      questionnaireHelper.textContent =
+        "Company mode: vendor submitted the assessment. You may now add company comments.";
     }
   }
 }
@@ -556,6 +650,154 @@ function setDisabled(field, disabled) {
     field.classList.remove("disabled-field");
   }
 }
+
+/* =========================
+   SIGN-OFF SHEET
+========================= */
+
+function renderSignoffFields(signoffs = []) {
+  const roles = [
+    "Business Unit Representative",
+    "Risk Management Officer",
+    "HR",
+    "IT Compliance",
+    "InfoSec",
+    "DPO"
+  ];
+
+  const signoffMap = {};
+
+  signoffs.forEach((item) => {
+    signoffMap[item.role_name] = item;
+  });
+
+  signoffFields.innerHTML = "";
+
+  roles.forEach((role) => {
+    const item = signoffMap[role] || {};
+
+    const row = document.createElement("div");
+    row.className = "signoff-row";
+    row.dataset.role = role;
+
+    row.innerHTML = `
+      <div>
+        <div class="signoff-role">${role}</div>
+      </div>
+
+      <div>
+        <label>Signer Name</label>
+        <input type="text" class="signer-name" value="${item.signer_name || ""}">
+      </div>
+
+      <div>
+        <label>Status</label>
+        <select class="signoff-status">
+          <option value="Pending" ${item.signoff_status === "Pending" ? "selected" : ""}>Pending</option>
+          <option value="Signed" ${item.signoff_status === "Signed" ? "selected" : ""}>Signed</option>
+          <option value="Rejected" ${item.signoff_status === "Rejected" ? "selected" : ""}>Rejected</option>
+        </select>
+      </div>
+    `;
+
+    signoffFields.appendChild(row);
+  });
+
+  applySignoffPermissions();
+}
+
+async function loadSignoffs() {
+  if (!activeAssessmentId) {
+    signoffFields.innerHTML = `<p class="empty-message">Select an assessment first.</p>`;
+    saveSignoffBtn.disabled = true;
+    return;
+  }
+
+  const response = await fetch(`/signoffs/${activeAssessmentId}`);
+
+  if (!response.ok) {
+    signoffFields.innerHTML = `<p class="empty-message">Unable to load sign-offs.</p>`;
+    saveSignoffBtn.disabled = true;
+    return;
+  }
+
+  const signoffs = await response.json();
+  renderSignoffFields(signoffs);
+}
+
+function collectSignoffs() {
+  const rows = document.querySelectorAll(".signoff-row");
+  const signoffs = [];
+
+  rows.forEach((row) => {
+    signoffs.push({
+      role_name: row.dataset.role,
+      signer_name: row.querySelector(".signer-name").value,
+      signoff_status: row.querySelector(".signoff-status").value
+    });
+  });
+
+  return signoffs;
+}
+
+function applySignoffPermissions() {
+  const fields = signoffFields.querySelectorAll("input, select");
+
+  if (currentUser.role !== "company_employee") {
+    fields.forEach((field) => setDisabled(field, true));
+    saveSignoffBtn.disabled = true;
+    return;
+  }
+
+  fields.forEach((field) => setDisabled(field, false));
+  saveSignoffBtn.disabled = false;
+}
+
+if (saveSignoffBtn) {
+  saveSignoffBtn.addEventListener("click", async () => {
+    if (!activeAssessmentId) {
+      alert("Select an assessment first.");
+      return;
+    }
+
+    const response = await fetch("/signoffs", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        assessment_id: activeAssessmentId,
+        signoffs: collectSignoffs()
+      })
+    });
+
+    const result = await response.json();
+    alert(result.message);
+
+    if (response.ok) {
+      loadSignoffs();
+    }
+  });
+}
+
+/* =========================
+   EXCEL EXPORT
+========================= */
+
+if (exportExcelBtn) {
+  exportExcelBtn.addEventListener("click", () => {
+    if (!activeAssessmentId) {
+      alert("Select an assessment first.");
+      return;
+    }
+
+    window.location.href = `/export/${activeAssessmentId}`;
+  });
+}
+
+/* =========================
+   HELPERS / INIT
+========================= */
 
 function formatDate(dateValue) {
   if (!dateValue) return "N/A";
