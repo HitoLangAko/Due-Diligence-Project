@@ -2101,3 +2101,15 @@ body[data-role="employee"] .top-actions .employee-only {
     grid-template-columns: 1fr;
   }
 }
+
+/* INFOSEC ASSESSMENT CARD SPACING */
+
+#infosecAssessmentPage.active {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+#infosecAssessmentPage .content-card {
+  margin-bottom: 0;
+}
