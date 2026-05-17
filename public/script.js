@@ -72,6 +72,8 @@ const vendorSuccessPanel = document.getElementById("vendorSuccessPanel");
 const successVendorName = document.getElementById("successVendorName");
 const submitAnotherVendorBtn = document.getElementById("submitAnotherVendorBtn");
 
+const clearVendorFormBtn = document.getElementById("clearVendorFormBtn");
+
 function getRoleLabel(role) {
   return roleLabels[role] || role || "User";
 }
@@ -160,6 +162,20 @@ if (submitAnotherVendorBtn) {
 
     if (addVendorForm) {
       addVendorForm.reset();
+    }
+
+    document.getElementById("companyName")?.focus();
+  });
+}
+
+if (clearVendorFormBtn) {
+  clearVendorFormBtn.addEventListener("click", () => {
+    if (addVendorForm) {
+      addVendorForm.reset();
+    }
+
+    if (vendorSuccessPanel) {
+      vendorSuccessPanel.classList.add("hidden");
     }
 
     document.getElementById("companyName")?.focus();
