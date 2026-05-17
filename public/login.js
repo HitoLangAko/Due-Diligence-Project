@@ -94,12 +94,17 @@ if (registerForm) {
         body: JSON.stringify(payload)
       });
 
-      showMessage(data.message || "Account created. You can now log in.", "success");
-      registerForm.reset();
-
-      document.querySelector('[data-auth-tab="login"]').click();
+    registerForm.reset();
+    document.querySelector('[data-auth-tab="login"]').click();
+    showMessage(data.message || "Account created. Please check your email.", "success");
     } catch (error) {
       showMessage(error.message || "Failed to register account.");
     }
   });
+}
+
+const urlParams = new URLSearchParams(window.location.search);
+
+if (urlParams.get("verified") === "1") {
+  showMessage("Email verified successfully. You can now log in.", "success");
 }

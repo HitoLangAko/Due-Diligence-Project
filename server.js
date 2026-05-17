@@ -5,6 +5,8 @@ const bcrypt = require("bcryptjs");
 const session = require("express-session");
 const path = require("path");
 const fs = require("fs");
+const crypto = require("crypto");
+const nodemailer = require("nodemailer");
 require("dotenv").config();
 
 const app = express();
@@ -222,6 +224,50 @@ initDatabase().catch((error) => {
 });
 
 /* =========================
+   VERIFICATION EMAAIL
+========================= */
+
+const APP_BASE_URL = process.env.APP_BASE_URL || "http://localhost:3000";
+
+const mailer = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST,
+  port: Number(process.env.EMAIL_PORT || 465),
+  secure: String(process.env.EMAIL_SECURE || "true") === "true",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
+
+function hashVerificationToken(token) {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+async function sendVerificationEmail(email, fullName, token) {
+  const verifyLink = `${APP_BASE_URL}/verify-email?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
+
+  await mailer.sendMail({
+    from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+    to: email,
+    subject: "Verify your Validify account",
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <h2>Verify your Validify account</h2>
+        <p>Hello ${fullName},</p>
+        <p>Please verify your email address before logging in.</p>
+        <p>
+          <a href="${verifyLink}" style="background:#2f66e8;color:#fff;padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:bold;">
+            Verify Email
+          </a>
+        </p>
+        <p>If the button does not work, copy this link:</p>
+        <p>${verifyLink}</p>
+      </div>
+    `
+  });
+}
+
+/* =========================
    AUTH ROUTES
 ========================= */
 
@@ -238,31 +284,111 @@ app.post("/register", async (req, res) => {
 
   try {
     const passwordHash = await bcrypt.hash(password, 10);
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const verificationTokenHash = hashVerificationToken(verificationToken);
+    const verificationExpires = new Date(Date.now() + 1000 * 60 * 60 * 24);
 
     const sql = `
       INSERT INTO users
-      (full_name, email, password_hash, role)
-      VALUES (?, ?, ?, ?)
+      (
+        full_name,
+        email,
+        password_hash,
+        role,
+        email_verified,
+        verification_token_hash,
+        verification_token_expires
+      )
+      VALUES (?, ?, ?, ?, 0, ?, ?)
     `;
 
-    db.query(sql, [full_name, email, passwordHash, role], (err) => {
-      if (err) {
-        if (err.code === "ER_DUP_ENTRY") {
-          return res.status(400).json({ message: "Email already exists." });
+    db.query(
+      sql,
+      [
+        full_name,
+        email,
+        passwordHash,
+        role,
+        verificationTokenHash,
+        verificationExpires
+      ],
+      async (err) => {
+        if (err) {
+          if (err.code === "ER_DUP_ENTRY") {
+            return res.status(400).json({ message: "Email already exists." });
+          }
+
+          console.error("Register error:", err);
+          return res.status(500).json({ message: "Failed to register account." });
         }
 
-        console.error("Register error:", err);
-        return res.status(500).json({ message: "Failed to register account." });
-      }
+        try {
+          await sendVerificationEmail(email, full_name, verificationToken);
 
-      res.json({
-        message: "Account registered successfully. You can now log in."
-      });
-    });
+          res.json({
+            message: "Account registered successfully. Please check your email to verify your account."
+          });
+        } catch (emailError) {
+          console.error("Verification email error:", emailError);
+
+          res.status(500).json({
+            message: "Account created, but verification email failed. Please check email settings."
+          });
+        }
+      }
+    );
   } catch (error) {
     console.error("Register server error:", error);
     res.status(500).json({ message: "Server error during registration." });
   }
+});
+
+app.get("/verify-email", (req, res) => {
+  const { email, token } = req.query;
+
+  if (!email || !token) {
+    return res.status(400).send("Invalid verification link.");
+  }
+
+  const tokenHash = hashVerificationToken(token);
+
+  const sql = `
+    SELECT user_id
+    FROM users
+    WHERE email = ?
+    AND verification_token_hash = ?
+    AND verification_token_expires > NOW()
+    AND email_verified = 0
+  `;
+
+  db.query(sql, [email, tokenHash], (err, results) => {
+    if (err) {
+      console.error("Verify email error:", err);
+      return res.status(500).send("Failed to verify email.");
+    }
+
+    if (results.length === 0) {
+      return res.status(400).send("Verification link is invalid or expired.");
+    }
+
+    const updateSql = `
+      UPDATE users
+      SET
+        email_verified = 1,
+        verification_token_hash = NULL,
+        verification_token_expires = NULL
+      WHERE user_id = ?
+    `;
+
+    db.query(updateSql, [results[0].user_id], (updateErr) => {
+      if (updateErr) {
+        console.error("Email verify update error:", updateErr);
+        return res.status(500).send("Failed to verify email.");
+      }
+
+      res.redirect("/login.html?verified=1");
+    });
+  });
 });
 
 app.post("/login", (req, res) => {
@@ -289,6 +415,12 @@ app.post("/login", (req, res) => {
 
     if (!passwordMatch) {
       return res.status(401).json({ message: "Invalid email or password." });
+    }
+
+    if (!user.email_verified) {
+      return res.status(403).json({
+        message: "Please verify your email before logging in."
+      });
     }
 
     req.session.user = {
