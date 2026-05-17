@@ -288,9 +288,6 @@ app.post("/register", async (req, res) => {
 
   try {
     const passwordHash = await bcrypt.hash(password, 10);
-    const verificationToken = crypto.randomBytes(32).toString("hex");
-    const verificationTokenHash = hashVerificationToken(verificationToken);
-    const verificationExpires = new Date(Date.now() + 1000 * 60 * 60 * 24);
 
     const sql = `
       INSERT INTO users
@@ -303,44 +300,23 @@ app.post("/register", async (req, res) => {
         verification_token_hash,
         verification_token_expires
       )
-      VALUES (?, ?, ?, ?, 0, ?, ?)
+      VALUES (?, ?, ?, ?, 1, NULL, NULL)
     `;
 
-    db.query(
-      sql,
-      [
-        full_name,
-        email,
-        passwordHash,
-        role,
-        verificationTokenHash,
-        verificationExpires
-      ],
-      async (err) => {
-        if (err) {
-          if (err.code === "ER_DUP_ENTRY") {
-            return res.status(400).json({ message: "Email already exists." });
-          }
-
-          console.error("Register error:", err);
-          return res.status(500).json({ message: "Failed to register account." });
+    db.query(sql, [full_name, email, passwordHash, role], (err) => {
+      if (err) {
+        if (err.code === "ER_DUP_ENTRY") {
+          return res.status(400).json({ message: "Email already exists." });
         }
 
-        try {
-          await sendVerificationEmail(email, full_name, verificationToken);
-
-          res.json({
-            message: "Account registered successfully. Please check your email to verify your account."
-          });
-        } catch (emailError) {
-          console.error("Verification email error:", emailError);
-
-          res.status(500).json({
-            message: "Account created, but verification email failed. Please check email settings."
-          });
-        }
+        console.error("Register error:", err);
+        return res.status(500).json({ message: "Failed to register account." });
       }
-    );
+
+      res.json({
+        message: "Account registered successfully. You can now log in."
+      });
+    });
   } catch (error) {
     console.error("Register server error:", error);
     res.status(500).json({ message: "Server error during registration." });
@@ -419,12 +395,6 @@ app.post("/login", (req, res) => {
 
     if (!passwordMatch) {
       return res.status(401).json({ message: "Invalid email or password." });
-    }
-
-    if (!user.email_verified) {
-      return res.status(403).json({
-        message: "Please verify your email before logging in."
-      });
     }
 
     req.session.user = {
