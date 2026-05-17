@@ -967,12 +967,13 @@ app.post("/infosec/assessments/:assessment_id/submit", requireRole("infosec"), u
 
       const submitSql = `
         UPDATE infosec_assessments
-        SET status = 'Pending Admin Approval',
+        SET purpose = ?,
+            status = 'Pending Admin Approval',
             submitted_at = CURRENT_TIMESTAMP
         WHERE assessment_id = ?
       `;
 
-      db.query(submitSql, [assessment_id], (submitErr) => {
+      db.query(submitSql, [req.body.purpose || "Info Sec", assessment_id], (submitErr) => {
         if (submitErr) {
           console.error("Submit infosec assessment error:", submitErr);
           return res.status(500).json({ message: "Failed to submit InfoSec assessment." });

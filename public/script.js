@@ -585,7 +585,7 @@ async function startInfoSecAssessment(vendorId) {
       method: "POST",
       body: JSON.stringify({
         vendor_id: vendorId,
-        purpose: "Information Security"
+        purpose: "Info Sec"
       })
     });
 
@@ -596,7 +596,7 @@ async function startInfoSecAssessment(vendorId) {
     if (infosecAssessmentCode) infosecAssessmentCode.value = assessment.assessment_code || "";
     if (infosecAssessmentDate) infosecAssessmentDate.value = formatDateForInput(assessment.created_at || new Date());
     if (infosecVendorSelect) infosecVendorSelect.value = String(vendorId);
-    if (infosecPurpose) infosecPurpose.value = assessment.purpose || "Information Security";
+    if (infosecPurpose) infosecPurpose.value = assessment.purpose || "Info Sec";
 
     await loadInfoSecAssessment(assessment.assessment_id);
     showPage("infosec-assessment");
@@ -617,7 +617,7 @@ async function loadInfoSecAssessment(assessmentId) {
   if (infosecAssessmentCode) infosecAssessmentCode.value = activeInfoSecAssessment.assessment_code || "";
   if (infosecAssessmentDate) infosecAssessmentDate.value = formatDateForInput(activeInfoSecAssessment.created_at || activeInfoSecAssessment.submitted_at || new Date());
   if (infosecVendorSelect) infosecVendorSelect.value = String(activeInfoSecAssessment.vendor_id);
-  if (infosecPurpose) infosecPurpose.value = activeInfoSecAssessment.purpose || "Information Security";
+  if (infosecPurpose) infosecPurpose.value = activeInfoSecAssessment.purpose || "Info Sec";
 
   updateCurrentlyAssessingCard(activeInfoSecAssessment);
   renderInfoSecFormQuestions();
@@ -716,6 +716,7 @@ async function submitInfoSecForm(event) {
   }
 
   formData.append("answers", JSON.stringify(answers));
+  formData.append("purpose", infosecPurpose?.value || "Info Sec");
 
   try {
     await api(`/infosec/assessments/${activeInfoSecAssessment.assessment_id}/submit`, {
