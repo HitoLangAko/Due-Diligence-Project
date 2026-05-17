@@ -114,7 +114,6 @@ const cancelSignoffBtn = document.getElementById("cancelSignoffBtn");
 
 const createInfoSecAssessmentBtn = document.getElementById("createInfoSecAssessmentBtn");
 const vendorAssessmentNavBtn = document.getElementById("vendorAssessmentNavBtn");
-const infosecAssessmentDate = document.getElementById("infosecAssessmentDate");
 
 function getRoleLabel(role) {
   return roleLabels[role] || role || "User";
