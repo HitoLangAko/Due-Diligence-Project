@@ -1,6 +1,14 @@
+
 let currentUser = null;
 let currentRole = "vendor";
 let currentReviewTab = "ddf";
+
+let vendorsCache = [];
+let assessmentsCache = [];
+let sectionsCache = [];
+let answersCache = {};
+let signoffsCache = {};
+let activeAssessmentId = localStorage.getItem("validify_active_assessment_id") || "";
 
 const pageTitle = document.getElementById("pageTitle");
 const breadcrumb = document.getElementById("breadcrumb");
@@ -90,16 +98,6 @@ const submitAllBtn = document.getElementById("submitAllBtn");
 const submitFormsTitle = document.getElementById("submitFormsTitle");
 const submitFormsDescription = document.getElementById("submitFormsDescription");
 const submitFormsNavText = document.getElementById("submitFormsNavText");
-
-let vendorKey = "validify_vendor_info_guest";
-let assessmentsKey = "validify_assessments_guest";
-let activeAssessmentKey = "validify_active_assessment_guest";
-let answersKey = "validify_form_answers_guest";
-
-const vendorDirectoryKey = "validify_vendor_directory";
-const assessmentDirectoryKey = "validify_assessment_directory";
-const oldGlobalSignoffKey = "validify_signoff_records";
-const oldGlobalReviewDateKey = "validify_review_date";
 
 const signoffRoles = [
   "IT",
@@ -291,63 +289,84 @@ const informationSecurityGroups = [
   }
 ];
 
-/* SESSION */
-
-async function checkLoggedInUser() {
-  try {
-    const response = await fetch("/me");
-
-    if (!response.ok) {
-      window.location.href = "login.html";
-      return;
-    }
-
-    currentUser = await response.json();
-    setStorageKeysForCurrentUser();
-  } catch (error) {
-    window.location.href = "login.html";
-    return;
-  }
-
-  applyUserRole();
-}
-
-function makeStorageSafe(value) {
-  return String(value || "guest")
-    .toLowerCase()
-    .trim()
-    .replaceAll("@", "_at_")
-    .replaceAll(".", "_")
-    .replaceAll(" ", "_")
-    .replaceAll("-", "_");
-}
-
-function getCurrentUserStorageId() {
-  return makeStorageSafe(
-    currentUser?.id ||
-      currentUser?.user_id ||
-      currentUser?.email ||
-      currentUser?.username ||
-      currentUser?.full_name ||
-      "guest"
-  );
-}
-
-function setStorageKeysForCurrentUser() {
-  const userId = getCurrentUserStorageId();
-
-  vendorKey = `validify_vendor_info_${userId}`;
-  assessmentsKey = `validify_assessments_${userId}`;
-  activeAssessmentKey = `validify_active_assessment_${userId}`;
-  answersKey = `validify_form_answers_${userId}`;
-}
-
 function isCurrentUserEmployee() {
   const roleText = String(currentRole || currentUser?.role || "")
     .toLowerCase()
     .replaceAll("_", " ");
 
   return roleText === "company employee" || roleText === "employee" || roleText.includes("employee");
+}
+
+async function apiFetch(url, options = {}) {
+  const response = await fetch(url, {
+    credentials: "same-origin",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    }
+  });
+
+  let data = null;
+
+  try {
+    data = await response.json();
+  } catch (error) {
+    data = null;
+  }
+
+  if (!response.ok) {
+    throw new Error(data?.message || "Request failed.");
+  }
+
+  return data;
+}
+
+function escapeHTML(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
+function normalizeVendor(row) {
+  return {
+    vendorId: row.vendor_id || row.vendorId,
+    ownerId: row.user_id || row.ownerId,
+    companyName: row.company_name || row.companyName || "",
+    companyWebsite: row.company_website || row.companyWebsite || "",
+    productServices: row.product_services_offered || row.productServices || "",
+    contactName: row.contact_person_name || row.contactName || "",
+    contactEmail: row.contact_email || row.contactEmail || "",
+    contactNumber: row.contact_phone || row.contactNumber || "",
+    dateSaved: row.updated_at || row.created_at || row.dateSaved || ""
+  };
+}
+
+function normalizeAssessment(row) {
+  return {
+    id: row.assessment_id || row.id,
+    assessmentId: row.assessment_id || row.id,
+    vendorId: row.vendor_id || row.vendorId,
+    ownerId: row.user_id || row.ownerId,
+    vendorName: row.company_name || row.vendorName || "No vendor",
+    date: row.assessment_date ? String(row.assessment_date).slice(0, 10) : row.date || "",
+    purpose: row.purpose || "",
+    status: row.status || "Draft",
+    reviewedDate: row.reviewed_date ? String(row.reviewed_date).slice(0, 10) : row.reviewedDate || "",
+    productServices: row.product_services_offered || row.productServices || ""
+  };
+}
+
+async function checkLoggedInUser() {
+  try {
+    currentUser = await apiFetch("/me");
+  } catch (error) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  applyUserRole();
 }
 
 function applyUserRole() {
@@ -379,17 +398,9 @@ function applyUserRole() {
       : "Vendor dashboard: answer the vendor questionnaire and submit it for company review.";
   }
 
-  if (submitFormsNavText) {
-    submitFormsNavText.textContent = isEmployee ? "Review Forms" : "Submit Forms";
-  }
-
-  if (dashboardTableTitle) {
-    dashboardTableTitle.textContent = "Recent Assessments";
-  }
-
-  if (submitFormsTitle) {
-    submitFormsTitle.textContent = isEmployee ? "Review Forms" : "Submit Forms";
-  }
+  if (submitFormsNavText) submitFormsNavText.textContent = isEmployee ? "Review Forms" : "Submit Forms";
+  if (dashboardTableTitle) dashboardTableTitle.textContent = "Recent Assessments";
+  if (submitFormsTitle) submitFormsTitle.textContent = isEmployee ? "Review Forms" : "Submit Forms";
 
   if (submitFormsDescription) {
     submitFormsDescription.textContent = isEmployee
@@ -398,168 +409,149 @@ function applyUserRole() {
   }
 }
 
-/* STORAGE */
+async function loadRemoteData() {
+  const [vendors, assessments, sections] = await Promise.all([
+    apiFetch("/vendors"),
+    apiFetch("/assessments"),
+    apiFetch("/sections-with-questions")
+  ]);
 
-function getJSON(key, fallback) {
-  return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback));
+  vendorsCache = vendors.map(normalizeVendor);
+  assessmentsCache = assessments.map(normalizeAssessment);
+  sectionsCache = sections || [];
+
+  buildQuestionIdMaps();
 }
 
-function setJSON(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
+function buildQuestionIdMaps() {
+  window.validifyQuestionIdMap = {};
+  window.validifyQuestionIdReverseMap = {};
+
+  sectionsCache.forEach((section) => {
+    let sectionKey = Object.keys(ddfTitles).find((key) => ddfTitles[key] === section.section_name);
+
+    if (section.tab_name === "Information Security") {
+      sectionKey = "information-security";
+    }
+
+    if (!sectionKey) return;
+
+    section.questions.forEach((question, index) => {
+      const key = `${sectionKey}:${index}`;
+      window.validifyQuestionIdMap[key] = question.question_id;
+      window.validifyQuestionIdReverseMap[String(question.question_id)] = {
+        sectionKey,
+        index
+      };
+    });
+  });
 }
 
-function escapeHTML(value) {
-  return String(value || "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
+function getQuestionId(sectionKey, index) {
+  return window.validifyQuestionIdMap?.[`${sectionKey}:${index}`] || "";
 }
 
 function getVendorDirectory() {
-  return getJSON(vendorDirectoryKey, []);
-}
-
-function saveVendorToDirectory(vendor) {
-  const vendors = getVendorDirectory();
-  const ownerId = getCurrentUserStorageId();
-
-  const vendorRecord = {
-    ...vendor,
-    ownerId,
-    ownerName: currentUser?.full_name || "Vendor User"
-  };
-
-  const existingIndex = vendors.findIndex((item) => item.ownerId === ownerId);
-
-  if (existingIndex >= 0) {
-    vendors[existingIndex] = vendorRecord;
-  } else {
-    vendors.push(vendorRecord);
-  }
-
-  setJSON(vendorDirectoryKey, vendors);
-}
-
-function getAssessmentDirectory() {
-  return getJSON(assessmentDirectoryKey, []);
-}
-
-function saveAssessmentDirectory(data) {
-  setJSON(assessmentDirectoryKey, data);
+  return vendorsCache;
 }
 
 function getAssessments() {
-  if (isCurrentUserEmployee()) {
-    return getAssessmentDirectory();
-  }
-
-  return getJSON(assessmentsKey, []);
+  return assessmentsCache;
 }
 
-function saveAssessments(data) {
-  if (isCurrentUserEmployee()) {
-    saveAssessmentDirectory(data);
-    return;
-  }
-
-  const ownerId = getCurrentUserStorageId();
-  const ownerName = currentUser?.full_name || "Vendor User";
-
-  const normalizedPersonal = data.map((item) => ({
-    ...item,
-    ownerId,
-    ownerName
-  }));
-
-  setJSON(assessmentsKey, normalizedPersonal);
-
-  const directory = getAssessmentDirectory().filter((item) => item.ownerId !== ownerId);
-  saveAssessmentDirectory([...directory, ...normalizedPersonal]);
-}
-
-function getAnswersKeyForActiveAssessment() {
-  const activeAssessment = getActiveAssessment();
-
-  if (isCurrentUserEmployee() && activeAssessment?.ownerId) {
-    return `validify_form_answers_${activeAssessment.ownerId}`;
-  }
-
-  return answersKey;
-}
-
-function getAnswers() {
-  return getJSON(getAnswersKeyForActiveAssessment(), {});
-}
-
-function saveAnswers(data) {
-  setJSON(getAnswersKeyForActiveAssessment(), data);
+function getAssessmentDirectory() {
+  return assessmentsCache;
 }
 
 function getActiveAssessmentId() {
-  return localStorage.getItem(activeAssessmentKey) || localStorage.getItem("validify_employee_active_assessment");
+  return activeAssessmentId || localStorage.getItem("validify_active_assessment_id") || "";
 }
 
 function setActiveAssessmentId(id) {
+  activeAssessmentId = id || "";
   if (id) {
-    if (isCurrentUserEmployee()) {
-      localStorage.setItem("validify_employee_active_assessment", id);
-    } else {
-      localStorage.setItem(activeAssessmentKey, id);
-    }
+    localStorage.setItem("validify_active_assessment_id", id);
   } else {
-    localStorage.removeItem(activeAssessmentKey);
-    localStorage.removeItem("validify_employee_active_assessment");
+    localStorage.removeItem("validify_active_assessment_id");
   }
 }
 
 function getActiveAssessment() {
-  const assessments = getAssessments();
   const activeId = getActiveAssessmentId();
-
-  return assessments.find((item) => String(item.id) === String(activeId)) || null;
+  return assessmentsCache.find((item) => String(item.id) === String(activeId)) || null;
 }
 
-function getSignoffKey() {
-  const activeAssessmentId = getActiveAssessmentId();
-
-  if (!activeAssessmentId) {
-    return "validify_signoff_records_empty";
-  }
-
-  return `validify_signoff_records_${activeAssessmentId}`;
+function getAnswers() {
+  return answersCache;
 }
 
 function getSignoffs() {
-  return getJSON(getSignoffKey(), {});
+  return signoffsCache;
 }
 
-function saveSignoffs(data) {
-  setJSON(getSignoffKey(), data);
-}
+async function loadAssessmentAnswers(assessmentId = getActiveAssessmentId()) {
+  answersCache = {};
 
-function getReviewDateKey() {
-  const activeAssessmentId = getActiveAssessmentId();
+  if (!assessmentId) return answersCache;
 
-  if (!activeAssessmentId) {
-    return "validify_review_date_empty";
+  try {
+    const data = await apiFetch(`/assessments/${assessmentId}/answers`);
+
+    (data.answers || []).forEach((answer) => {
+      const map = window.validifyQuestionIdReverseMap?.[String(answer.question_id)];
+      if (!map) return;
+
+      const { sectionKey, index } = map;
+
+      if (!answersCache[sectionKey]) answersCache[sectionKey] = [];
+      if (!answersCache[sectionKey][index]) answersCache[sectionKey][index] = {};
+
+      answersCache[sectionKey][index].vendor = answer.vendor_response || "";
+      answersCache[sectionKey][index].company = answer.company_comment || "";
+    });
+  } catch (error) {
+    console.error(error);
   }
 
-  return `validify_review_date_${activeAssessmentId}`;
+  return answersCache;
 }
 
-function updateActiveAssessmentStatus(status) {
-  const assessments = getAssessments();
-  const activeId = getActiveAssessmentId();
+async function loadAssessmentSignoffs(assessmentId = getActiveAssessmentId()) {
+  signoffsCache = {};
 
-  const target = assessments.find((item) => String(item.id) === String(activeId));
+  if (!assessmentId) return signoffsCache;
 
-  if (!target) return;
+  try {
+    const rows = await apiFetch(`/signoffs/${assessmentId}`);
 
-  target.status = status;
-  target.reviewedDate = reviewDateInput?.value || getTodayDate();
+    rows.forEach((item) => {
+      const normalizedRole = normalizeSignoffRole(item.role_name);
 
-  saveAssessments(assessments);
-  renderDashboard();
+      signoffsCache[normalizedRole] = {
+        name: item.signer_name || "",
+        status: item.signoff_status || "Pending",
+        signatureFileName: item.signature_file_name || "",
+        signedAt: item.signed_at || ""
+      };
+    });
+  } catch (error) {
+    console.error(error);
+  }
+
+  return signoffsCache;
+}
+
+function normalizeSignoffRole(role) {
+  const text = String(role || "").toLowerCase();
+
+  if (text.includes("info")) return "Info Sec";
+  if (text.includes("risk")) return "Risk Management Officer";
+  if (text.includes("compliance")) return "Compliance";
+  if (text.includes("dpo")) return "DPO";
+  if (text.includes("hr")) return "HR";
+  if (text.includes("it")) return "IT";
+
+  return role;
 }
 
 function formatSavedDate(dateValue) {
@@ -567,7 +559,7 @@ function formatSavedDate(dateValue) {
 
   const date = new Date(dateValue);
 
-  if (Number.isNaN(date.getTime())) return "N/A";
+  if (Number.isNaN(date.getTime())) return String(dateValue);
 
   return date.toLocaleDateString("en-US", {
     month: "short",
@@ -579,8 +571,6 @@ function formatSavedDate(dateValue) {
 function getTodayDate() {
   return new Date().toISOString().slice(0, 10);
 }
-
-/* NAVIGATION */
 
 function setActiveNav(page) {
   navLinks.forEach((button) => {
@@ -598,13 +588,11 @@ function showOnlyPage(pageKey) {
     return;
   }
 
-  if (pages.form) {
-    pages.form.classList.add("active");
-  }
+  if (pages.form) pages.form.classList.add("active");
 }
 
 function showPage(page) {
-  saveVisibleResponses();
+  saveVisibleResponsesToCache();
 
   const isEmployee = isCurrentUserEmployee();
 
@@ -627,14 +615,14 @@ function showPage(page) {
   if (page === "dashboard") {
     pageTitle.textContent = "Dashboard";
     breadcrumb.textContent = isEmployee ? "Dashboard" : "Dashboard / Home";
-    renderDashboard();
+    refreshDashboard();
     return;
   }
 
   if (page === "vendor-directory") {
     pageTitle.textContent = "Vendor Directory";
     breadcrumb.textContent = "Vendor Directory";
-    renderEmployeePages();
+    refreshEmployeePages();
     return;
   }
 
@@ -695,12 +683,18 @@ function showPage(page) {
   }
 }
 
-/* DASHBOARD */
+async function refreshDashboard() {
+  await loadRemoteData();
+  renderDashboard();
+}
+
+async function refreshEmployeePages() {
+  await loadRemoteData();
+  renderEmployeePages();
+}
 
 function getStatusClass(status) {
-  return String(status || "")
-    .toLowerCase()
-    .replaceAll(" ", "-");
+  return String(status || "").toLowerCase().replaceAll(" ", "-");
 }
 
 function getAssessmentAction(assessment, isEmployee) {
@@ -741,7 +735,7 @@ function renderDashboard() {
     if (vendorStatsGrid) vendorStatsGrid.classList.add("hidden");
     if (employeeStatsGrid) employeeStatsGrid.classList.remove("hidden");
 
-    employeeStatVendor.textContent = getVendorDirectory().length;
+    employeeStatVendor.textContent = vendorsCache.length;
     employeeStatSubmitted.textContent = assessments.filter((item) => item.status === "Submitted").length;
     employeeStatRejected.textContent = assessments.filter((item) => item.status === "Rejected").length;
     employeeStatReviewed.textContent = assessments.filter((item) => item.status === "Reviewed" || item.status === "Approved").length;
@@ -755,6 +749,8 @@ function renderDashboard() {
     vendorStatSubmitted.textContent = assessments.filter((item) => item.status === "Submitted").length;
     vendorStatReviewed.textContent = assessments.filter((item) => item.status === "Reviewed" || item.status === "Approved").length;
   }
+
+  if (!recentAssessmentsBody) return;
 
   if (assessments.length === 0) {
     recentAssessmentsBody.innerHTML = `
@@ -792,8 +788,6 @@ function renderDashboard() {
     .join("");
 }
 
-/* EMPLOYEE PAGES */
-
 function renderEmployeePages() {
   const vendors = getVendorDirectory();
 
@@ -829,13 +823,13 @@ function populateReviewSelector() {
 
     vendors.forEach((vendor) => {
       const selected =
-        activeAssessment?.ownerId === vendor.ownerId ||
+        String(activeAssessment?.vendorId) === String(vendor.vendorId) ||
         activeAssessment?.vendorName === vendor.companyName
           ? "selected"
           : "";
 
       reviewVendorSelect.innerHTML += `
-        <option value="${escapeHTML(vendor.ownerId)}" ${selected}>
+        <option value="${escapeHTML(vendor.vendorId)}" ${selected}>
           ${escapeHTML(vendor.companyName || "Unnamed Vendor")}
         </option>
       `;
@@ -843,12 +837,22 @@ function populateReviewSelector() {
   }
 
   if (reviewDateInput) {
-    const savedDate = localStorage.getItem(getReviewDateKey());
-    reviewDateInput.value = savedDate || activeAssessment?.reviewedDate || getTodayDate();
+    reviewDateInput.value = activeAssessment?.reviewedDate || getTodayDate();
   }
 }
 
-function renderAssessmentReviewPage() {
+async function renderAssessmentReviewPage() {
+  await loadRemoteData();
+
+  const active = getActiveAssessment();
+
+  if (!active && assessmentsCache.length) {
+    setActiveAssessmentId(assessmentsCache[0].id);
+  }
+
+  await loadAssessmentAnswers();
+  await loadAssessmentSignoffs();
+
   populateReviewSelector();
   renderReviewTab();
 }
@@ -866,6 +870,11 @@ function setReviewTab(tab) {
 function renderReviewTab() {
   if (!reviewTabContent) return;
 
+  if (!getActiveAssessment()) {
+    reviewTabContent.innerHTML = `<p class="muted">Please select a vendor with an assessment first.</p>`;
+    return;
+  }
+
   if (currentReviewTab === "ddf") {
     renderReviewDDF();
     return;
@@ -881,7 +890,6 @@ function renderReviewTab() {
 
 function renderReviewDDF() {
   const answers = getAnswers();
-
   let html = "";
 
   ddfOrder.forEach((sectionKey) => {
@@ -911,6 +919,7 @@ function renderReviewDDF() {
                 data-section="${sectionKey}"
                 data-index="${index}"
                 data-type="company"
+                data-question-id="${getQuestionId(sectionKey, index)}"
                 placeholder="Company Review or Comment"
               >${escapeHTML(companyAnswer)}</textarea>
             </div>
@@ -963,7 +972,7 @@ function renderReviewInformationSecurity() {
                 </a>
               </div>
 
-              <textarea class="review-vendor-box" disabled>Vendor comment</textarea>
+              <textarea class="review-vendor-box" disabled>${escapeHTML(vendorAnswer || "Vendor comment")}</textarea>
             </div>
 
             <div>
@@ -973,6 +982,7 @@ function renderReviewInformationSecurity() {
                 data-section="information-security"
                 data-index="${globalIndex}"
                 data-type="company"
+                data-question-id="${getQuestionId("information-security", globalIndex)}"
                 placeholder="Company Review or Comment"
               >${escapeHTML(companyAnswer)}</textarea>
             </div>
@@ -1042,12 +1052,14 @@ function renderSignoffFormPage() {
   if (signatureFileName) signatureFileName.textContent = "Upload Signature";
 }
 
-function renderAuditSubmitPage() {
-  const activeAssessment = getActiveAssessment();
-  const signoffs = getSignoffs();
-  const vendor = getVendorDirectory().find((item) => item.ownerId === activeAssessment?.ownerId) || getJSON(vendorKey, {});
+async function renderAuditSubmitPage() {
+  await loadRemoteData();
+  await loadAssessmentSignoffs();
 
-  const signedCount = signoffRoles.filter((role) => signoffs[role]?.status === "Signed").length;
+  const activeAssessment = getActiveAssessment();
+  const vendor = vendorsCache.find((item) => String(item.vendorId) === String(activeAssessment?.vendorId)) || {};
+
+  const signedCount = signoffRoles.filter((role) => signoffsCache[role]?.status === "Signed").length;
   const allSigned = signedCount === signoffRoles.length;
 
   if (auditVendorName) auditVendorName.textContent = vendor.companyName || activeAssessment?.vendorName || "N/A";
@@ -1056,8 +1068,6 @@ function renderAuditSubmitPage() {
   if (auditISStatus) auditISStatus.textContent = activeAssessment?.status === "Rejected" ? "Rejected" : "Cleared";
   if (auditSignoffStatus) auditSignoffStatus.textContent = allSigned ? "Signed and Approved" : "Pending";
 }
-
-/* VENDOR INFO */
 
 function loadVendorInfo() {
   document.getElementById("companyName").value = "";
@@ -1071,45 +1081,58 @@ function loadVendorInfo() {
 }
 
 if (vendorInfoForm) {
-  vendorInfoForm.addEventListener("submit", (event) => {
+  vendorInfoForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
-    const vendor = {
-      companyName: document.getElementById("companyName").value.trim(),
-      companyWebsite: document.getElementById("companyWebsite").value.trim(),
-      productServices: document.getElementById("productServices").value.trim(),
-      contactName: document.getElementById("contactName").value.trim(),
-      contactEmail: document.getElementById("contactEmail").value.trim(),
-      contactNumber: document.getElementById("contactNumber").value.trim(),
-      dateSaved: new Date().toISOString()
+    const payload = {
+      company_name: document.getElementById("companyName").value.trim(),
+      company_website: document.getElementById("companyWebsite").value.trim(),
+      product_services_offered: document.getElementById("productServices").value.trim(),
+      contact_person_name: document.getElementById("contactName").value.trim(),
+      contact_email: document.getElementById("contactEmail").value.trim(),
+      contact_phone: document.getElementById("contactNumber").value.trim()
     };
 
-    setJSON(vendorKey, vendor);
-    saveVendorToDirectory(vendor);
+    if (!payload.company_name) {
+      alert("Please enter a company name.");
+      return;
+    }
 
-    populateAssessmentOptions();
-    renderEmployeePages();
+    try {
+      await apiFetch("/vendors", {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
 
-    vendorInfoForm.reset();
-    loadVendorInfo();
+      await loadRemoteData();
+      populateAssessmentOptions();
+      renderEmployeePages();
 
-    alert("Vendor information saved.");
+      vendorInfoForm.reset();
+      loadVendorInfo();
+
+      alert("Vendor information saved.");
+    } catch (error) {
+      alert(error.message);
+    }
   });
 }
 
-/* ASSESSMENT */
-
 function populateAssessmentOptions() {
-  const vendor = getJSON(vendorKey, {});
+  const vendors = getVendorDirectory();
   const assessments = getAssessments();
   const activeId = getActiveAssessmentId();
 
   if (assessmentVendor) {
     assessmentVendor.innerHTML = `<option value="">Select a Vendor</option>`;
 
-    if (vendor.companyName) {
-      assessmentVendor.innerHTML += `<option value="${escapeHTML(vendor.companyName)}">${escapeHTML(vendor.companyName)}</option>`;
-    }
+    vendors.forEach((vendor) => {
+      assessmentVendor.innerHTML += `
+        <option value="${vendor.vendorId}">
+          ${escapeHTML(vendor.companyName)}
+        </option>
+      `;
+    });
   }
 
   if (existingAssessment) {
@@ -1141,52 +1164,52 @@ function updateActiveAssessmentText() {
 }
 
 if (assessmentForm) {
-  assessmentForm.addEventListener("submit", (event) => {
+  assessmentForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
-    const vendorName = assessmentVendor.value;
+    const vendorId = assessmentVendor.value;
     const date = document.getElementById("assessmentDate").value;
     const purpose = document.getElementById("assessmentPurpose").value;
 
-    if (!vendorName || !date || !purpose) {
+    if (!vendorId || !date || !purpose) {
       alert("Please complete the assessment form.");
       return;
     }
 
-    const ownerId = getCurrentUserStorageId();
-    const ownerName = currentUser?.full_name || "Vendor User";
-    const assessments = getAssessments();
+    try {
+      const result = await apiFetch("/assessments", {
+        method: "POST",
+        body: JSON.stringify({
+          vendor_id: vendorId,
+          assessment_date: date,
+          purpose
+        })
+      });
 
-    const assessment = {
-      id: Date.now(),
-      ownerId,
-      ownerName,
-      vendorName,
-      date,
-      purpose,
-      status: "Draft"
-    };
+      setActiveAssessmentId(result.assessment_id);
 
-    assessments.push(assessment);
-    saveAssessments(assessments);
-    setActiveAssessmentId(assessment.id);
+      await loadRemoteData();
+      await loadAssessmentAnswers(result.assessment_id);
 
-    assessmentForm.reset();
-    populateAssessmentOptions();
-    renderDashboard();
+      assessmentForm.reset();
+      populateAssessmentOptions();
+      renderDashboard();
 
-    alert("Assessment created.");
+      alert("Assessment created.");
+    } catch (error) {
+      alert(error.message);
+    }
   });
 }
 
 if (existingAssessment) {
-  existingAssessment.addEventListener("change", () => {
+  existingAssessment.addEventListener("change", async () => {
     setActiveAssessmentId(existingAssessment.value);
+    await loadAssessmentAnswers();
+    await loadAssessmentSignoffs();
     updateActiveAssessmentText();
   });
 }
-
-/* DDF AND IS RENDERING */
 
 function makeVendorResponseField(sectionKey, index, value) {
   const disabled = isCurrentUserEmployee() ? "disabled" : "";
@@ -1197,6 +1220,7 @@ function makeVendorResponseField(sectionKey, index, value) {
       data-section="${sectionKey}"
       data-index="${index}"
       data-type="vendor"
+      data-question-id="${getQuestionId(sectionKey, index)}"
       placeholder="Vendor Response"
       ${disabled}
     >${escapeHTML(value)}</textarea>
@@ -1212,6 +1236,7 @@ function makeCompanyReviewField(sectionKey, index, value) {
       data-section="${sectionKey}"
       data-index="${index}"
       data-type="company"
+      data-question-id="${getQuestionId(sectionKey, index)}"
       placeholder="Company Review"
       ${disabled}
     >${escapeHTML(value)}</textarea>
@@ -1268,22 +1293,26 @@ function renderDDF(sectionKey) {
   formPanel.innerHTML = html;
   setupAutoResizeTextareas();
 
-  document.getElementById("ddfForm").addEventListener("submit", (event) => {
+  document.getElementById("ddfForm").addEventListener("submit", async (event) => {
     event.preventDefault();
-    saveVisibleResponses();
+    saveVisibleResponsesToCache();
 
-    if (isEmployee) {
-      alert("Company review saved.");
-      return;
-    }
+    try {
+      await saveVisibleResponsesToServer();
 
-    if (isLast) {
-      alert("Draft saved.");
-      return;
-    }
+      if (isEmployee) {
+        alert("Company review saved.");
+        return;
+      }
 
-    if (nextSection) {
-      showPage(nextSection);
+      if (isLast) {
+        alert("Draft saved.");
+        return;
+      }
+
+      if (nextSection) showPage(nextSection);
+    } catch (error) {
+      alert(error.message);
     }
   });
 }
@@ -1334,6 +1363,7 @@ function renderInformationSecurity() {
               data-section="information-security"
               data-index="${globalIndex}"
               data-type="vendor"
+              data-question-id="${getQuestionId("information-security", globalIndex)}"
               ${vendorDisabled}
             >
               <option value="" ${vendorSaved === "" ? "selected" : ""}>Select response</option>
@@ -1347,6 +1377,7 @@ function renderInformationSecurity() {
               data-section="information-security"
               data-index="${globalIndex}"
               data-type="company"
+              data-question-id="${getQuestionId("information-security", globalIndex)}"
               placeholder="Company Review"
               ${companyDisabled}
             >${escapeHTML(companySaved)}</textarea>
@@ -1372,7 +1403,7 @@ function renderInformationSecurity() {
   formPanel.innerHTML = html;
   setupAutoResizeTextareas();
 
-  document.getElementById("isForm").addEventListener("submit", (event) => {
+  document.getElementById("isForm").addEventListener("submit", async (event) => {
     event.preventDefault();
 
     if (!isEmployee) {
@@ -1396,8 +1427,14 @@ function renderInformationSecurity() {
       }
     }
 
-    saveVisibleResponses();
-    alert(isEmployee ? "Information Security review saved." : "Information Security draft saved.");
+    saveVisibleResponsesToCache();
+
+    try {
+      await saveVisibleResponsesToServer();
+      alert(isEmployee ? "Information Security review saved." : "Information Security draft saved.");
+    } catch (error) {
+      alert(error.message);
+    }
   });
 }
 
@@ -1423,26 +1460,60 @@ function validateISRequired() {
   return valid;
 }
 
-/* ANSWERS */
-
-function saveVisibleResponses() {
+function saveVisibleResponsesToCache() {
   const fields = document.querySelectorAll("[data-section][data-index][data-type]");
   if (!fields.length) return;
-
-  const answers = getAnswers();
 
   fields.forEach((field) => {
     const section = field.dataset.section;
     const index = Number(field.dataset.index);
     const type = field.dataset.type;
 
-    if (!answers[section]) answers[section] = [];
-    if (!answers[section][index]) answers[section][index] = {};
+    if (!answersCache[section]) answersCache[section] = [];
+    if (!answersCache[section][index]) answersCache[section][index] = {};
 
-    answers[section][index][type] = field.value;
+    answersCache[section][index][type] = field.value;
   });
+}
 
-  saveAnswers(answers);
+async function saveVisibleResponsesToServer() {
+  const activeId = getActiveAssessmentId();
+  const fields = Array.from(document.querySelectorAll("[data-section][data-index][data-type]"));
+
+  if (!activeId || !fields.length) return;
+
+  const answers = fields
+    .map((field) => {
+      const questionId = field.dataset.questionId || getQuestionId(field.dataset.section, Number(field.dataset.index));
+      if (!questionId) return null;
+
+      if (field.dataset.type === "vendor") {
+        return {
+          question_id: Number(questionId),
+          vendor_response: field.value
+        };
+      }
+
+      return {
+        question_id: Number(questionId),
+        company_comment: field.value
+      };
+    })
+    .filter(Boolean);
+
+  if (!answers.length) {
+    throw new Error("Question setup is missing. Please make sure question_sections and questions are seeded in MySQL.");
+  }
+
+  const url = isCurrentUserEmployee() ? "/answers/company-review" : "/answers/vendor-save";
+
+  await apiFetch(url, {
+    method: "POST",
+    body: JSON.stringify({
+      assessment_id: activeId,
+      answers
+    })
+  });
 }
 
 function autoResizeTextarea(textarea) {
@@ -1468,7 +1539,7 @@ function setupAutoResizeTextareas() {
 
       if (message) message.classList.add("hidden");
 
-      saveVisibleResponses();
+      saveVisibleResponsesToCache();
     });
 
     field.addEventListener("change", () => {
@@ -1479,15 +1550,13 @@ function setupAutoResizeTextareas() {
 
       if (message) message.classList.add("hidden");
 
-      saveVisibleResponses();
+      saveVisibleResponsesToCache();
     });
   });
 }
 
-/* SUBMIT FORMS */
-
 function renderSubmitForms() {
-  saveVisibleResponses();
+  saveVisibleResponsesToCache();
 
   const answers = getAnswers();
   const isEmployee = isCurrentUserEmployee();
@@ -1548,7 +1617,7 @@ function renderSubmitForms() {
 }
 
 if (submitAllBtn) {
-  submitAllBtn.addEventListener("click", () => {
+  submitAllBtn.addEventListener("click", async () => {
     const activeId = getActiveAssessmentId();
 
     if (!activeId) {
@@ -1556,73 +1625,79 @@ if (submitAllBtn) {
       return;
     }
 
-    const assessments = getAssessments();
-    const target = assessments.find((item) => String(item.id) === String(activeId));
+    try {
+      await apiFetch(`/assessments/${activeId}/submit`, {
+        method: "PATCH",
+        body: JSON.stringify({})
+      });
 
-    if (target) {
-      target.status = "Submitted";
-      saveAssessments(assessments);
+      await loadRemoteData();
+      renderDashboard();
+
+      alert("Forms submitted successfully.");
+      showPage("dashboard");
+    } catch (error) {
+      alert(error.message);
     }
-
-    renderDashboard();
-    alert("Forms submitted successfully.");
-    showPage("dashboard");
   });
 }
-
-/* EXCEL */
 
 if (generateEmployeeExcelBtn) {
-  generateEmployeeExcelBtn.addEventListener("click", () => {
-    if (typeof XLSX === "undefined") {
-      alert("XLSX library is missing. Add xlsx-js-style script in index.html before script.js.");
-      return;
+  generateEmployeeExcelBtn.addEventListener("click", async () => {
+    try {
+      await loadRemoteData();
+
+      const activeId = getActiveAssessmentId();
+      let active = null;
+
+      if (activeId) {
+        active = assessmentsCache.find((item) => String(item.id) === String(activeId));
+      }
+
+      if (!active) {
+        active = assessmentsCache.find(
+          (item) => item.status === "Reviewed" || item.status === "Approved"
+        );
+      }
+
+      if (!active) {
+        alert("Please select or mark an assessment as Reviewed first before generating Excel.");
+        return;
+      }
+
+      const response = await fetch(`/export/${active.id}`);
+
+      if (!response.ok) {
+        let message = "Failed to generate formatted Excel.";
+
+        try {
+          const errorData = await response.json();
+          message = errorData.message || message;
+        } catch (error) {
+          console.error("Export error response could not be read:", error);
+        }
+
+        alert(message);
+        return;
+      }
+
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = downloadUrl;
+      link.download = `assessment_${active.id}_export.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error("Excel export failed:", error);
+      alert("Failed to generate Excel. Please try again.");
     }
-
-    const vendors = getVendorDirectory();
-    const assessments = getAssessmentDirectory();
-    const signoffs = getSignoffs();
-
-    const workbook = XLSX.utils.book_new();
-
-    const vendorRows = vendors.length
-      ? vendors.map((vendor) => ({
-          "Company Name": vendor.companyName || "N/A",
-          "Services": vendor.productServices || "N/A",
-          "Contact": vendor.contactName || "N/A",
-          "Email": vendor.contactEmail || "N/A",
-          "Contact Number": vendor.contactNumber || "N/A",
-          "Date Saved": formatSavedDate(vendor.dateSaved)
-        }))
-      : [{ "Company Name": "No vendors yet", Services: "", Contact: "", Email: "", "Contact Number": "", "Date Saved": "" }];
-
-    const assessmentRows = assessments.length
-      ? assessments.map((assessment) => ({
-          "Assessment Name": assessment.purpose || "Assessment",
-          "Vendor": assessment.vendorName || "N/A",
-          "Type": assessment.purpose || "N/A",
-          "Date Modified": assessment.reviewedDate || assessment.date || "N/A",
-          "Status": assessment.status || "N/A"
-        }))
-      : [{ "Assessment Name": "No assessments yet", Vendor: "", Type: "", "Date Modified": "", Status: "" }];
-
-    const signoffRows = signoffRoles.map((role) => ({
-      "Department / Role": role,
-      "Signer Name": signoffs?.[role]?.name || "",
-      "Status": signoffs?.[role]?.status || "Pending",
-      "Signature File": signoffs?.[role]?.signatureFileName || "",
-      "Signed At": signoffs?.[role]?.signedAt || ""
-    }));
-
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(vendorRows), "Vendor Directory");
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(assessmentRows), "Assessments");
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(signoffRows), "Sign-off Sheet");
-
-    XLSX.writeFile(workbook, "Validify_Assessment_Report.xlsx");
   });
 }
-
-/* EVENTS */
 
 navButtons.forEach((button) => {
   button.addEventListener("click", () => {
@@ -1663,11 +1738,13 @@ if (accountToggle && accountMenu) {
   });
 }
 
-document.addEventListener("click", (event) => {
+document.addEventListener("click", async (event) => {
   const reviewButton = event.target.closest("[data-review-id]");
 
   if (reviewButton) {
     setActiveAssessmentId(reviewButton.dataset.reviewId);
+    await loadAssessmentAnswers();
+    await loadAssessmentSignoffs();
     showPage("assessment-reviews");
   }
 
@@ -1680,13 +1757,30 @@ document.addEventListener("click", (event) => {
   const reviewAction = event.target.closest("[data-review-action]");
 
   if (reviewAction) {
-    saveVisibleResponses();
-    localStorage.setItem(getReviewDateKey(), reviewDateInput?.value || getTodayDate());
+    saveVisibleResponsesToCache();
 
-    updateActiveAssessmentStatus(reviewAction.dataset.reviewAction);
+    try {
+      await saveVisibleResponsesToServer();
 
-    alert(`Assessment marked as ${reviewAction.dataset.reviewAction}.`);
-    renderReviewTab();
+      const status = reviewAction.dataset.reviewAction;
+
+      await apiFetch(`/assessments/${getActiveAssessmentId()}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          status,
+          reviewed_date: reviewDateInput?.value || getTodayDate()
+        })
+      });
+
+      await loadRemoteData();
+      await loadAssessmentAnswers();
+
+      alert(`Assessment marked as ${status}.`);
+      renderReviewTab();
+      renderDashboard();
+    } catch (error) {
+      alert(error.message);
+    }
   }
 
   if (event.target.closest("#goToSignoffFormBtn")) {
@@ -1710,24 +1804,26 @@ document.addEventListener("input", (event) => {
   }
 
   if (event.target.classList.contains("company-review-live")) {
-    saveVisibleResponses();
+    saveVisibleResponsesToCache();
   }
 });
 
 if (reviewVendorSelect) {
-  reviewVendorSelect.addEventListener("change", () => {
-    const selectedOwnerId = reviewVendorSelect.value;
-    const assessments = getAssessmentDirectory();
-
-    const found = assessments
+  reviewVendorSelect.addEventListener("change", async () => {
+    const selectedVendorId = reviewVendorSelect.value;
+    const found = assessmentsCache
       .slice()
       .reverse()
-      .find((assessment) => assessment.ownerId === selectedOwnerId);
+      .find((assessment) => String(assessment.vendorId) === String(selectedVendorId));
 
     if (found) {
       setActiveAssessmentId(found.id);
+      await loadAssessmentAnswers(found.id);
+      await loadAssessmentSignoffs(found.id);
     } else {
       setActiveAssessmentId("");
+      answersCache = {};
+      signoffsCache = {};
     }
 
     renderAssessmentReviewPage();
@@ -1735,9 +1831,7 @@ if (reviewVendorSelect) {
 }
 
 if (reviewDateInput) {
-  reviewDateInput.addEventListener("change", () => {
-    localStorage.setItem(getReviewDateKey(), reviewDateInput.value);
-  });
+  reviewDateInput.addEventListener("change", () => {});
 }
 
 if (signatureFile) {
@@ -1751,7 +1845,7 @@ if (signatureFile) {
 }
 
 if (signoffForm) {
-  signoffForm.addEventListener("submit", (event) => {
+  signoffForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     const activeAssessment = getActiveAssessment();
@@ -1765,27 +1859,35 @@ if (signoffForm) {
     const role = signoffRole.value;
     const name = signoffName.value.trim();
     const decision = document.querySelector("input[name='approvalDecision']:checked")?.value || "Pending";
-    const fileName = signatureFile.files.length > 0 ? signatureFile.files[0].name : "";
 
     if (!role || !name) {
       alert("Please select a role and enter the signer's full name.");
       return;
     }
 
-    const signoffs = getSignoffs();
+    try {
+      await apiFetch("/signoffs", {
+        method: "POST",
+        body: JSON.stringify({
+          assessment_id: activeAssessment.id,
+          signoffs: [
+            {
+              role_name: role,
+              signer_name: name,
+              signoff_status: decision
+            }
+          ]
+        })
+      });
 
-    signoffs[role] = {
-      name,
-      status: decision,
-      signatureFileName: fileName,
-      signedAt: new Date().toISOString()
-    };
+      await loadAssessmentSignoffs(activeAssessment.id);
 
-    saveSignoffs(signoffs);
-
-    currentReviewTab = "signoff";
-    alert("Sign-off record saved.");
-    showPage("assessment-reviews");
+      currentReviewTab = "signoff";
+      alert("Sign-off record saved.");
+      showPage("assessment-reviews");
+    } catch (error) {
+      alert(error.message);
+    }
   });
 }
 
@@ -1802,10 +1904,30 @@ if (cancelAuditBtn) {
 }
 
 if (submitAuditBtn) {
-  submitAuditBtn.addEventListener("click", () => {
-    updateActiveAssessmentStatus("Reported to Audit");
-    alert("Assessment submitted to Audit Team.");
-    showPage("dashboard");
+  submitAuditBtn.addEventListener("click", async () => {
+    const active = getActiveAssessment();
+
+    if (!active) {
+      alert("Please select an assessment first.");
+      return;
+    }
+
+    try {
+      await apiFetch(`/assessments/${active.id}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          status: "Reported to Audit",
+          reviewed_date: reviewDateInput?.value || active.reviewedDate || getTodayDate()
+        })
+      });
+
+      await loadRemoteData();
+
+      alert("Assessment submitted to Audit Team.");
+      showPage("dashboard");
+    } catch (error) {
+      alert(error.message);
+    }
   });
 }
 
@@ -1813,32 +1935,30 @@ if (logoutBtn) {
   logoutBtn.addEventListener("click", async () => {
     try {
       await fetch("/logout", {
-        method: "POST"
+        method: "POST",
+        credentials: "same-origin"
       });
     } catch (error) {
       console.log("Logout request failed. Clearing local session.");
     }
 
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("validifyCurrentUser");
-    localStorage.removeItem("validifyLoggedInUser");
-    localStorage.removeItem("currentUser");
-    localStorage.removeItem("loggedInUser");
-    localStorage.removeItem("validifyCurrentRole");
-
+    localStorage.removeItem("validify_active_assessment_id");
     sessionStorage.clear();
 
     window.location.href = "login.html";
   });
 }
 
-/* INIT */
-
 async function init() {
   await checkLoggedInUser();
+  await loadRemoteData();
 
-  localStorage.removeItem(oldGlobalSignoffKey);
-  localStorage.removeItem(oldGlobalReviewDateKey);
+  if (!getActiveAssessmentId() && assessmentsCache.length) {
+    setActiveAssessmentId(assessmentsCache[0].id);
+  }
+
+  await loadAssessmentAnswers();
+  await loadAssessmentSignoffs();
 
   populateAssessmentOptions();
   renderEmployeePages();
