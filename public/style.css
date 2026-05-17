@@ -1838,3 +1838,29 @@ body[data-role="employee"] .top-actions .vendor-only {
 body[data-role="employee"] .top-actions .employee-only {
   display: flex !important;
 }
+
+.vendor-success-card {
+  border: 1px solid #10b981;
+  background: #ecfdf5;
+  color: #065f46;
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 22px;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.12);
+}
+
+.vendor-success-title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.vendor-success-title i {
+  margin-right: 8px;
+}
+
+.vendor-success-message {
+  margin: 0 0 16px;
+  color: #047857;
+  font-weight: 700;
+}

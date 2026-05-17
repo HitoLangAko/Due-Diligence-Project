@@ -347,10 +347,25 @@
       </section>
 
       <section class="page" id="addVendorPage">
-        <div class="content-card form-card-small">
-          <h3>Add Vendor</h3>
+          <div class="content-card form-card-small">
+            <h3>Add Vendor</h3>
 
-          <form id="addVendorForm">
+            <div class="vendor-success-card hidden" id="vendorSuccessPanel">
+              <p class="vendor-success-title">
+                <i class="fa-solid fa-check"></i>
+                Success. Vendor <span id="successVendorName">Vendor</span> saved.
+              </p>
+
+              <p class="vendor-success-message">
+                Forwarded to IT, InfoSec, Management, DPO, HR, and Compliance for assessment.
+              </p>
+
+              <button type="button" class="small-action-btn" id="submitAnotherVendorBtn">
+                Submit Another
+              </button>
+            </div>
+
+            <form id="addVendorForm">
             <div class="form-grid two-col">
               <div class="field-group">
                 <label>Company Name</label>

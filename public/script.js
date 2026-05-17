@@ -68,6 +68,10 @@ const departmentAssessmentsBody = document.getElementById("departmentAssessments
 const allVendorsBody = document.getElementById("allVendorsBody");
 const departmentReviewsBody = document.getElementById("departmentReviewsBody");
 
+const vendorSuccessPanel = document.getElementById("vendorSuccessPanel");
+const successVendorName = document.getElementById("successVendorName");
+const submitAnotherVendorBtn = document.getElementById("submitAnotherVendorBtn");
+
 function getRoleLabel(role) {
   return roleLabels[role] || role || "User";
 }
@@ -146,6 +150,20 @@ async function checkLoggedInUser() {
   }
 
   applyRoleLayout();
+}
+
+if (submitAnotherVendorBtn) {
+  submitAnotherVendorBtn.addEventListener("click", () => {
+    if (vendorSuccessPanel) {
+      vendorSuccessPanel.classList.add("hidden");
+    }
+
+    if (addVendorForm) {
+      addVendorForm.reset();
+    }
+
+    document.getElementById("companyName")?.focus();
+  });
 }
 
 function applyRoleLayout() {
@@ -305,8 +323,18 @@ function setupAddVendorForm() {
 
       addVendorForm.reset();
       await loadEmployeeData();
-      showToast("Vendor submitted to all department accounts.");
-      showPage("my-submissions");
+
+      if (successVendorName) {
+        successVendorName.textContent = payload.company_name;
+      }
+
+      if (vendorSuccessPanel) {
+        vendorSuccessPanel.classList.remove("hidden");
+        vendorSuccessPanel.scrollIntoView({
+          behavior: "smooth",
+          block: "center"
+        });
+      }
     } catch (error) {
       alert(error.message);
     }
