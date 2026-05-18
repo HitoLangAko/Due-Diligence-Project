@@ -2839,3 +2839,23 @@ html body[data-role="employee"] #vendorAssessmentPage #submitDepartmentFormBtn {
 #assessmentReviewPage .review-panel {
   width: 100%;
 }
+
+/* Hide create vendor assessment card for department users */
+body[data-role="it"] #vendorAssessmentPage .vendor-assessment-card,
+body[data-role="infosec"] #vendorAssessmentPage .vendor-assessment-card,
+body[data-role="management"] #vendorAssessmentPage .vendor-assessment-card,
+body[data-role="dpo"] #vendorAssessmentPage .vendor-assessment-card,
+body[data-role="hr"] #vendorAssessmentPage .vendor-assessment-card,
+body[data-role="compliance"] #vendorAssessmentPage .vendor-assessment-card {
+  display: none !important;
+}
+
+/* Hide Insert Vendor page if department users somehow access it */
+body[data-role="it"] #addVendorPage,
+body[data-role="infosec"] #addVendorPage,
+body[data-role="management"] #addVendorPage,
+body[data-role="dpo"] #addVendorPage,
+body[data-role="hr"] #addVendorPage,
+body[data-role="compliance"] #addVendorPage {
+  display: none !important;
+}

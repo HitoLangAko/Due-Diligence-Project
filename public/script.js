@@ -299,11 +299,17 @@ function pageLabel(page) {
 }
 
 function showPage(page) {
+  if (isDepartmentRole() && page === "add-vendor") {
+    page = "dashboard";
+  }
+
   setActiveNav(page);
   showOnlyPage(page);
+
   const label = pageLabel(page);
   if (pageTitle) pageTitle.textContent = label;
   if (breadcrumb) breadcrumb.textContent = `${getRoleLabel(currentRole)} / ${label}`;
+
   refreshCurrentPage(page);
 }
 
