@@ -282,6 +282,10 @@ function getAssessmentTitleForRole(role = currentRole) {
   return titles[role] || "Vendor Assessment";
 }
 
+function getActiveAssessmentRole() {
+  return activeInfoSecAssessment?.department_role || currentRole;
+}
+
 function configureDepartmentUI() {
   if (!isDepartmentRole()) return;
 
@@ -579,7 +583,7 @@ function renderInfoSecSubmissions() {
     <tr>
       <td><strong>${escapeHTML(item.assessment_code || `IA-${item.assessment_id}`)}</strong></td>
       <td>${escapeHTML(item.company_name)}</td>
-      <td>${escapeHTML(item.purpose || getDefaultPurposeForRole())}</td>
+      <td>${escapeHTML(getRoleLabel(item.department_role))} - ${escapeHTML(item.purpose || getDefaultPurposeForRole(item.department_role))}</td>
       <td><span class="status-pill ${statusClass(item.status)}">${escapeHTML(item.status)}</span></td>
       <td>${escapeHTML(formatDate(item.submitted_at || item.created_at))}</td>
     </tr>
@@ -598,7 +602,7 @@ function renderPendingApproval() {
     <tr>
       <td><strong>${escapeHTML(item.assessment_code || `IA-${item.assessment_id}`)}</strong></td>
       <td>${escapeHTML(item.company_name)}</td>
-      <td>${escapeHTML(item.purpose || getDefaultPurposeForRole())}</td>
+      <td>${escapeHTML(getRoleLabel(item.department_role))} - ${escapeHTML(item.purpose || getDefaultPurposeForRole(item.department_role))}</td>
       <td><span class="status-pill ${statusClass(item.status)}">${escapeHTML(item.status)}</span></td>
       <td>${escapeHTML(formatDate(item.submitted_at))}</td>
     </tr>
@@ -618,7 +622,7 @@ function populateInfoSecAssessmentDropdowns() {
     infoSecSubmissions.forEach((assessment) => {
       existingInfoSecAssessment.innerHTML += `
         <option value="${assessment.assessment_id}">
-          ${escapeHTML(assessment.assessment_code)} - ${escapeHTML(assessment.company_name)} - ${escapeHTML(assessment.status)}
+          ${escapeHTML(assessment.assessment_code)} - ${escapeHTML(getRoleLabel(assessment.department_role))} - ${escapeHTML(assessment.company_name)} - ${escapeHTML(assessment.status)}${assessment.submitted_by ? ` - by ${escapeHTML(assessment.submitted_by)}` : ""}
         </option>
       `;
     });
@@ -697,6 +701,10 @@ async function loadInfoSecAssessment(assessmentId) {
   activeInfoSecAssessment = data.assessment;
   activeInfoSecAnswers = {};
 
+  if (Array.isArray(data.questions)) {
+    infoSecQuestions = data.questions;
+  }
+
   data.answers.forEach((answer) => {
     activeInfoSecAnswers[answer.question_index] = answer;
   });
@@ -704,7 +712,22 @@ async function loadInfoSecAssessment(assessmentId) {
   if (infosecAssessmentCode) infosecAssessmentCode.value = activeInfoSecAssessment.assessment_code || "";
   if (infosecAssessmentDate) infosecAssessmentDate.value = activeInfoSecAssessment.assessment_date || getTodayDateInputValue();
   if (infosecVendorSelect) infosecVendorSelect.value = String(activeInfoSecAssessment.vendor_id);
-  if (infosecPurpose) infosecPurpose.value = activeInfoSecAssessment.purpose || getDefaultPurposeForRole();
+  const assessmentRole = getActiveAssessmentRole();
+
+  if (infosecPurpose) {
+    const savedPurpose = activeInfoSecAssessment.purpose || getDefaultPurposeForRole(assessmentRole);
+    const hasPurposeOption = Array.from(infosecPurpose.options).some((option) => option.value === savedPurpose);
+
+    if (!hasPurposeOption) {
+      infosecPurpose.add(new Option(savedPurpose, savedPurpose));
+    }
+
+    infosecPurpose.value = savedPurpose;
+  }
+
+  if (departmentAssessmentHeading) {
+    departmentAssessmentHeading.textContent = getAssessmentTitleForRole(assessmentRole);
+  }
 
   updateCurrentlyAssessingCard(activeInfoSecAssessment);
   renderInfoSecFormQuestions();
@@ -725,7 +748,7 @@ function renderInfoSecFormQuestions() {
     const response = saved.response || "";
     const explanation = saved.explanation || "";
     const artifactName = saved.artifact_name || "";
-    const section = question.section_name || getAssessmentTitleForRole();
+    const section = question.section_name || getAssessmentTitleForRole(getActiveAssessmentRole());
     const sectionHeader = section !== lastSection
       ? `<div class="is-group-title"><h3>${escapeHTML(section)}</h3><p>Answer the required vendor assessment questions.</p></div>`
       : "";
@@ -803,7 +826,7 @@ async function submitInfoSecForm(event) {
 
     answers.push({
       question_index: index,
-      section_name: question.section_name || getAssessmentTitleForRole(),
+      section_name: question.section_name || getAssessmentTitleForRole(getActiveAssessmentRole()),
       question_text: question.question_text,
       response,
       explanation,
@@ -813,7 +836,7 @@ async function submitInfoSecForm(event) {
   }
 
   formData.append("answers", JSON.stringify(answers));
-  formData.append("purpose", infosecPurpose?.value || getDefaultPurposeForRole());
+  formData.append("purpose", infosecPurpose?.value || getDefaultPurposeForRole(getActiveAssessmentRole()));
 
   try {
     await api(`/department/assessments/${activeInfoSecAssessment.assessment_id}/submit`, {
@@ -821,7 +844,7 @@ async function submitInfoSecForm(event) {
       body: formData
     });
 
-    showToast(`${getRoleLabel(currentRole)} assessment submitted to Admin.`);
+    showToast(`${getRoleLabel(getActiveAssessmentRole())} assessment submitted to Admin.`);
     await loadInfoSecData();
     showPage("pending-approval");
   } catch (error) {

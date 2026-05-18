@@ -946,14 +946,13 @@ app.post("/department/assessments/start", requireAnyRole(departmentRoles), (req,
     SELECT *
     FROM department_assessments
     WHERE vendor_id = ?
-    AND submitted_by_user_id = ?
     AND department_role = ?
     AND status = 'Draft'
     ORDER BY assessment_id DESC
     LIMIT 1
   `;
 
-  db.query(findDraftSql, [vendor_id, req.session.user.user_id, departmentRole], (findErr, drafts) => {
+  db.query(findDraftSql, [vendor_id, departmentRole], (findErr, drafts) => {
     if (findErr) {
       console.error("Find department draft error:", findErr);
       return res.status(500).json({ message: "Failed to start assessment." });
@@ -968,8 +967,6 @@ app.post("/department/assessments/start", requireAnyRole(departmentRoles), (req,
 });
 
 app.get("/department/assessments/mine", requireAnyRole(departmentRoles), (req, res) => {
-  const departmentRole = req.session.user.role;
-
   const sql = `
     SELECT
       da.assessment_id,
@@ -983,17 +980,18 @@ app.get("/department/assessments/mine", requireAnyRole(departmentRoles), (req, r
       da.created_at,
       da.admin_comment,
       v.company_name,
-      v.product_services_offered
+      v.product_services_offered,
+      u.full_name AS submitted_by
     FROM department_assessments da
     JOIN vendors v ON da.vendor_id = v.vendor_id
-    WHERE da.submitted_by_user_id = ?
-    AND da.department_role = ?
+    LEFT JOIN users u ON da.submitted_by_user_id = u.user_id
+    WHERE da.department_role IN ('it', 'infosec', 'management', 'dpo', 'hr', 'compliance')
     ORDER BY da.created_at DESC
   `;
 
-  db.query(sql, [req.session.user.user_id, departmentRole], (err, rows) => {
+  db.query(sql, (err, rows) => {
     if (err) {
-      console.error("Fetch my department assessments error:", err);
+      console.error("Fetch department assessments error:", err);
       return res.status(500).json({ message: "Failed to load submissions." });
     }
 
@@ -1002,7 +1000,6 @@ app.get("/department/assessments/mine", requireAnyRole(departmentRoles), (req, r
 });
 
 app.get("/department/assessments/:assessment_id", requireAnyRole(departmentRoles), (req, res) => {
-  const departmentRole = req.session.user.role;
   const { assessment_id } = req.params;
 
   const sql = `
@@ -1013,11 +1010,10 @@ app.get("/department/assessments/:assessment_id", requireAnyRole(departmentRoles
     FROM department_assessments da
     JOIN vendors v ON da.vendor_id = v.vendor_id
     WHERE da.assessment_id = ?
-    AND da.submitted_by_user_id = ?
-    AND da.department_role = ?
+    AND da.department_role IN ('it', 'infosec', 'management', 'dpo', 'hr', 'compliance')
   `;
 
-  db.query(sql, [assessment_id, req.session.user.user_id, departmentRole], (err, rows) => {
+  db.query(sql, [assessment_id], (err, rows) => {
     if (err) {
       console.error("Fetch department assessment error:", err);
       return res.status(500).json({ message: "Failed to load assessment." });
@@ -1027,6 +1023,7 @@ app.get("/department/assessments/:assessment_id", requireAnyRole(departmentRoles
       return res.status(404).json({ message: "Assessment not found." });
     }
 
+    const assessment = rows[0];
     const answersSql = `
       SELECT *
       FROM department_answers
@@ -1041,7 +1038,8 @@ app.get("/department/assessments/:assessment_id", requireAnyRole(departmentRoles
       }
 
       res.json({
-        assessment: rows[0],
+        assessment,
+        questions: getDepartmentQuestions(assessment.department_role),
         answers
       });
     });
@@ -1064,7 +1062,6 @@ app.post("/department/assessments/:assessment_id/submit", requireAnyRole(departm
     return res.status(400).json({ message: "No answers submitted." });
   }
 
-  const questions = getDepartmentQuestions(departmentRole);
   const filesByQuestion = {};
 
   (req.files || []).forEach((file) => {
@@ -1096,11 +1093,10 @@ app.post("/department/assessments/:assessment_id/submit", requireAnyRole(departm
     SELECT *
     FROM department_assessments
     WHERE assessment_id = ?
-    AND submitted_by_user_id = ?
-    AND department_role = ?
+    AND department_role IN ('it', 'infosec', 'management', 'dpo', 'hr', 'compliance')
   `;
 
-  db.query(checkSql, [assessment_id, req.session.user.user_id, departmentRole], (checkErr, rows) => {
+  db.query(checkSql, [assessment_id], (checkErr, rows) => {
     if (checkErr) {
       console.error("Check department assessment error:", checkErr);
       return res.status(500).json({ message: "Failed to check assessment." });
@@ -1111,6 +1107,8 @@ app.post("/department/assessments/:assessment_id/submit", requireAnyRole(departm
     }
 
     const assessment = rows[0];
+    const assessmentRole = assessment.department_role || departmentRole;
+    const questions = getDepartmentQuestions(assessmentRole);
 
     const values = answers.map((answer) => {
       const file = filesByQuestion[answer.question_index];
@@ -1119,7 +1117,7 @@ app.post("/department/assessments/:assessment_id/submit", requireAnyRole(departm
       return [
         assessment_id,
         answer.question_index,
-        question.section_name || answer.section_name || getRoleLabelForServer(departmentRole),
+        question.section_name || answer.section_name || getRoleLabelForServer(assessmentRole),
         question.question_text || answer.question_text || "",
         answer.response,
         answer.explanation || null,
@@ -1165,7 +1163,7 @@ app.post("/department/assessments/:assessment_id/submit", requireAnyRole(departm
         WHERE assessment_id = ?
       `;
 
-      db.query(submitSql, [req.body.purpose || assessment.purpose || defaultPurposes[departmentRole], assessment_id], (submitErr) => {
+      db.query(submitSql, [req.body.purpose || assessment.purpose || defaultPurposes[assessmentRole], assessment_id], (submitErr) => {
         if (submitErr) {
           console.error("Submit department assessment error:", submitErr);
           return res.status(500).json({ message: "Failed to submit assessment." });
@@ -1185,13 +1183,13 @@ app.post("/department/assessments/:assessment_id/submit", requireAnyRole(departm
           reviewSql,
           [
             req.session.user.user_id,
-            `${getRoleLabelForServer(departmentRole)} assessment ${assessment.assessment_code || assessment_id} submitted to Admin.`,
+            `${getRoleLabelForServer(assessmentRole)} assessment ${assessment.assessment_code || assessment_id} submitted to Admin.`,
             assessment.vendor_id,
-            departmentRole
+            assessmentRole
           ],
           () => {
             updateVendorOverallStatus(assessment.vendor_id, () => {
-              res.json({ message: `${getRoleLabelForServer(departmentRole)} assessment submitted to Admin for approval.` });
+              res.json({ message: `${getRoleLabelForServer(assessmentRole)} assessment submitted to Admin for approval.` });
             });
           }
         );
@@ -1201,8 +1199,6 @@ app.post("/department/assessments/:assessment_id/submit", requireAnyRole(departm
 });
 
 app.get("/department/pending-approval", requireAnyRole(departmentRoles), (req, res) => {
-  const departmentRole = req.session.user.role;
-
   const sql = `
     SELECT
       da.assessment_id,
@@ -1215,16 +1211,17 @@ app.get("/department/pending-approval", requireAnyRole(departmentRoles), (req, r
       da.submitted_at,
       da.admin_comment,
       v.company_name,
-      v.product_services_offered
+      v.product_services_offered,
+      u.full_name AS submitted_by
     FROM department_assessments da
     JOIN vendors v ON da.vendor_id = v.vendor_id
-    WHERE da.submitted_by_user_id = ?
-    AND da.department_role = ?
+    LEFT JOIN users u ON da.submitted_by_user_id = u.user_id
+    WHERE da.department_role IN ('it', 'infosec', 'management', 'dpo', 'hr', 'compliance')
     AND da.status = 'Pending Admin Approval'
     ORDER BY da.submitted_at DESC
   `;
 
-  db.query(sql, [req.session.user.user_id, departmentRole], (err, rows) => {
+  db.query(sql, (err, rows) => {
     if (err) {
       console.error("Fetch department pending approvals error:", err);
       return res.status(500).json({ message: "Failed to load pending approvals." });
