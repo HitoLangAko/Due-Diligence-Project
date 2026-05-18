@@ -2474,3 +2474,32 @@ body[data-role="employee"] .top-actions .employee-only {
   background: #10b981;
   color: #ffffff;
 }
+
+/* FIX VENDOR ASSESSMENT EXTRA TALL CARDS */
+
+#vendorAssessmentPage .existing-assessment-card,
+#vendorAssessmentPage .currently-assessing-card {
+  min-height: unset !important;
+  height: auto !important;
+  padding: 24px 28px !important;
+}
+
+#vendorAssessmentPage .existing-assessment-card {
+  margin-top: 0;
+}
+
+#vendorAssessmentPage .currently-assessing-card {
+  background: #eef6ff;
+}
+
+#vendorAssessmentPage .currently-assessing-card h3 {
+  margin: 0 0 16px 0;
+}
+
+#vendorAssessmentPage .currently-assessing-card p {
+  margin: 0 0 10px 0;
+}
+
+#vendorAssessmentPage .currently-assessing-card .muted {
+  margin-bottom: 0;
+}
