@@ -1974,6 +1974,124 @@ async function saveProfile(event) {
   }
 }
 
+async function generateAdminExcel() {
+  try {
+    let url = "/admin/export-excel";
+
+    const currentPage = getCurrentPage();
+
+    if (currentPage === "assessment-review") {
+      if (!selectedReviewAssessment || !selectedReviewAssessment.assessment_id) {
+        alert("Please select a vendor assessment first.");
+        return;
+      }
+
+      url = `/admin/export-excel?assessment_id=${encodeURIComponent(selectedReviewAssessment.assessment_id)}`;
+    }
+
+    const response = await fetch(url, {
+      method: "GET",
+      credentials: "same-origin"
+    });
+
+    if (!response.ok) {
+      let errorMessage = "Failed to generate Excel report.";
+
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch (_error) {}
+
+      throw new Error(errorMessage);
+    }
+
+    const blob = await response.blob();
+
+    const contentDisposition = response.headers.get("Content-Disposition") || "";
+    const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+
+    const filename = filenameMatch
+      ? filenameMatch[1]
+      : selectedReviewAssessment?.assessment_code
+        ? `${selectedReviewAssessment.assessment_code}-due-diligence-report.xlsx`
+        : "validify-due-diligence-report.xlsx";
+
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = downloadUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+
+    link.remove();
+    window.URL.revokeObjectURL(downloadUrl);
+
+    showToast("Excel report generated.");
+  } catch (error) {
+    alert(error.message || "Failed to generate Excel report.");
+  }
+}
+
+async function generateAdminExcel() {
+  try {
+    let url = "/admin/export-excel";
+
+    const currentPage = getCurrentPage();
+
+    if (currentPage === "assessment-review") {
+      if (!selectedReviewAssessment || !selectedReviewAssessment.assessment_id) {
+        alert("Please select a vendor assessment first.");
+        return;
+      }
+
+      url = `/admin/export-excel?assessment_id=${encodeURIComponent(selectedReviewAssessment.assessment_id)}`;
+    }
+
+    const response = await fetch(url, {
+      method: "GET",
+      credentials: "same-origin"
+    });
+
+    if (!response.ok) {
+      let errorMessage = "Failed to generate Excel report.";
+
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch (_error) {}
+
+      throw new Error(errorMessage);
+    }
+
+    const blob = await response.blob();
+
+    const contentDisposition = response.headers.get("Content-Disposition") || "";
+    const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+
+    const filename = filenameMatch
+      ? filenameMatch[1]
+      : selectedReviewAssessment?.assessment_code
+        ? `${selectedReviewAssessment.assessment_code}-due-diligence-report.xlsx`
+        : "validify-due-diligence-report.xlsx";
+
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = downloadUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+
+    link.remove();
+    window.URL.revokeObjectURL(downloadUrl);
+
+    showToast("Excel report generated.");
+  } catch (error) {
+    alert(error.message || "Failed to generate Excel report.");
+  }
+}
+
 function setupEvents() {
   document.querySelectorAll("[data-page]").forEach((button) => {
     button.addEventListener("click", () => showPage(button.dataset.page));
@@ -1984,15 +2102,16 @@ function setupEvents() {
   });
 
   if (refreshBtn) {
-    refreshBtn.addEventListener("click", async () => {
-      if (currentRole === "admin") {
-        await generateAdminExcel();
-        return;
-      }
-      refreshCurrentPage();
-      showToast("Page refreshed.");
-    });
-  }
+  refreshBtn.addEventListener("click", async () => {
+    if (currentRole === "admin") {
+      await generateAdminExcel();
+      return;
+    }
+
+    refreshCurrentPage();
+    showToast("Page refreshed.");
+  });
+}
 
   if (accountToggle && accountMenu) {
     accountToggle.addEventListener("click", (event) => {

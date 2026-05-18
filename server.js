@@ -2489,9 +2489,11 @@ function createSignoffSheet(workbook, signoffs) {
   });
 }
 
+
+
 app.get("/admin/export-excel", requireRole("admin"), async (req, res) => {
   try {
-    const requestedAssessmentId = req.query.assessment_id ? Number(req.query.assessment_id) : null;
+    const selectedAssessmentId = req.query.assessment_id || null;
     const assessmentParams = [];
     let assessmentWhere = "";
     let assessmentLimit = "LIMIT 1";
@@ -2501,6 +2503,14 @@ app.get("/admin/export-excel", requireRole("admin"), async (req, res) => {
       assessmentParams.push(requestedAssessmentId);
       assessmentLimit = "";
     }
+
+    const assessmentWhere = selectedAssessmentId
+      ? "WHERE va.assessment_id = ?"
+      : "";
+
+    const assessmentParams = selectedAssessmentId
+      ? [selectedAssessmentId]
+      : [];
 
     const assessments = await runQuery(
       `
@@ -2524,10 +2534,15 @@ app.get("/admin/export-excel", requireRole("admin"), async (req, res) => {
         LEFT JOIN users u ON va.created_by_user_id = u.user_id
         ${assessmentWhere}
         ORDER BY va.created_at DESC
-        ${assessmentLimit}
       `,
       assessmentParams
     );
+
+    if (!assessments.length) {
+      return res.status(404).json({
+        message: "Selected assessment not found."
+      });
+    }
 
     const selectedAssessment = assessments[0] || {};
     const selectedAssessmentId = selectedAssessment.assessment_id || requestedAssessmentId || null;
