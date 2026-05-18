@@ -153,16 +153,13 @@ const departmentQuestionGroups = {
     {
       section_name: "IT Risk Management",
       questions: [
-        "Does the vendor have documented IT policies and procedures?",
-        "Does the vendor maintain an inventory of systems and applications used for service delivery?",
-        "Does the vendor use secure configuration standards for systems and endpoints?",
-        "Does the vendor perform patching and vulnerability management?",
-        "Does the vendor use endpoint protection or anti-malware controls?",
-        "Does the vendor enforce strong authentication and password controls?",
-        "Does the vendor maintain system activity logs for monitoring and investigation?",
-        "Does the vendor have backup and restoration procedures for critical systems?",
-        "Does the vendor restrict administrative privileges to authorized users?",
-        "Does the vendor have technical support or escalation procedures for system issues?"
+        "Does your organization include IT-related functions such as hardware, software, cloud, maintenance, or other IT resources?",
+        "If yes, please provide detailed scope or involvement and outsourced IT functions.",
+        "Do you have an IT Risk Management organizational framework or program?",
+        "Do you monitor and report Key Risk Indicators and other IT Risk Metrics?",
+        "Do you use any third-party IT vendors, contractors, or subcontractors?",
+        "Please share documented agreements such as MSA, SLA, NDA, and BCP.",
+        "Will the service be supplied via private cloud, public cloud, hybrid cloud, or community cloud?",
       ]
     }
   ]
