@@ -1115,11 +1115,17 @@ async function loadAdminData() {
 function renderAdminStats() {
   if (departmentStatsGrid) departmentStatsGrid.classList.add("hidden");
   if (adminStatsGrid) adminStatsGrid.classList.remove("hidden");
-  const pendingReviews = adminRows.reduce((sum, vendor) => sum + Number(vendor.pending_reviews || 0), 0);
+
+  const pendingVendors = adminRows.filter((vendor) => {
+    return Number(vendor.pending_reviews || 0) > 0 ||
+      ["Pending", "In Review", "Pending Admin Approval"].includes(vendor.overall_status || "Pending");
+  }).length;
+
   const completed = adminRows.filter((item) => item.overall_status === "Completed").length;
   const rejected = adminRows.filter((item) => item.overall_status === "Rejected").length;
+
   if (adminTotalVendors) adminTotalVendors.textContent = adminRows.length;
-  if (adminPendingReviews) adminPendingReviews.textContent = pendingReviews;
+  if (adminPendingReviews) adminPendingReviews.textContent = pendingVendors;
   if (adminCompletedVendors) adminCompletedVendors.textContent = completed;
   if (adminRejectedVendors) adminRejectedVendors.textContent = rejected;
 }
