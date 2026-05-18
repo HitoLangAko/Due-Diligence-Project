@@ -334,11 +334,12 @@
         </div>
       </section>
 
-      <section class="page" id="vendorAssessmentPage">
-        <div class="content-card form-card-small">
+        <section class="page" id="vendorAssessmentPage">
+        <div class="content-card vendor-assessment-card">
           <h3>Information Security Assessment</h3>
 
-          <div class="field-group">
+          <div class="assessment-meta-grid">
+            <div class="field-group">
               <label>Assessment ID</label>
               <input
                 type="text"
@@ -359,7 +360,9 @@
 
             <div class="field-group">
               <label>Select Vendor</label>
-              <select id="infosecVendorSelect"></select>
+              <select id="infosecVendorSelect" required>
+                <option value="">Select Vendor</option>
+              </select>
             </div>
 
             <div class="field-group">
@@ -372,35 +375,48 @@
                 <option value="Renewal">Renewal</option>
               </select>
             </div>
-            </div>
-            <div class="assessment-create-row">
-                <button type="button" class="submit-draft-btn" id="createInfoSecAssessmentBtn">
-                  Create Assessment
-                  <i class="fa-solid fa-arrow-right"></i>
-                </button>
-              </div>
           </div>
 
-
-          <div class="existing-assessment-panel">
-            <div class="field-group">
-              <label>Select Existing Assessment</label>
-              <select id="existingInfoSecAssessment"></select>
-            </div>
+          <div class="assessment-create-row">
+            <button type="button" class="submit-draft-btn" id="createInfoSecAssessmentBtn">
+              Create Assessment
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
           </div>
+        </div>
 
-          <div class="currently-assessing-card" id="currentlyAssessingCard">
-            <span>Vendor Being Assessed</span>
-            <strong id="currentlyAssessingVendor">Select a vendor to assess</strong>
-            <small id="currentlyAssessingServices">The selected vendor details will appear here.</small>
+        <div class="content-card existing-assessment-card">
+          <div class="field-group">
+            <label>Select Existing Assessment</label>
+            <select id="existingInfoSecAssessment">
+              <option value="">Select Existing Assessment</option>
+            </select>
           </div>
+        </div>
 
+        <div class="content-card currently-assessing-card">
+          <h3>Vendor Being Assessed</h3>
+          <p><strong id="currentlyAssessingVendor">No vendor selected</strong></p>
+          <p id="currentlyAssessingServices" class="muted">Create or select an assessment first.</p>
+        </div>
+
+        <div class="content-card infosec-form-card">
           <form id="infosecForm">
-            <div id="infosecQuestionsWrap"></div>
+            <div id="infosecQuestionsWrap">
+              <p class="empty-cell">
+                Select a vendor and click Create Assessment to begin.
+              </p>
+            </div>
 
             <div class="vendor-form-actions">
-              <button type="button" class="clear-form-btn" id="cancelInfoSecAssessmentBtn">Cancel</button>
-              <button type="submit" class="submit-draft-btn">Submit to Admin <i class="fa-solid fa-arrow-right"></i></button>
+              <button type="button" class="clear-form-btn" id="cancelInfoSecAssessmentBtn">
+                Cancel
+              </button>
+
+              <button type="submit" class="submit-draft-btn">
+                Submit to Admin
+                <i class="fa-solid fa-arrow-right"></i>
+              </button>
             </div>
           </form>
         </div>
@@ -431,13 +447,13 @@
       </section>
 
       <section class="page" id="signoffPage">
-        <div class="content-card signoff-wrapper">
-          <div class="signoff-header">
+        <div class="content-card signoff-card">
+          <div class="signoff-heading">
             <h3>Sign-off Authorization</h3>
             <p>Please provide your digital signature details to finalize approval.</p>
           </div>
 
-          <form id="signoffForm" class="signoff-form">
+          <form id="signoffForm">
             <div class="field-group">
               <label>Department / Role</label>
               <select id="signoffRole" required>
@@ -448,63 +464,29 @@
 
             <div class="field-group">
               <label>Signer's Full Name</label>
-              <input
-                type="text"
-                id="signoffName"
-                placeholder="Enter Full Name"
-                required
-              />
+              <input type="text" id="signoffName" placeholder="Enter Full Name" required />
             </div>
 
             <div class="field-group">
               <label>Approval Decision</label>
-
-              <div class="signoff-radio-row">
-                <label>
-                  <input
-                    type="radio"
-                    name="approvalDecision"
-                    value="Signed"
-                    checked
-                  />
-                  Approve and Sign
-                </label>
-
-                <label>
-                  <input
-                    type="radio"
-                    name="approvalDecision"
-                    value="Pending"
-                  />
-                  Keep Pending
-                </label>
+              <div class="radio-row">
+                <label><input type="radio" name="approvalDecision" value="Signed" checked /> Approve and Sign</label>
+                <label><input type="radio" name="approvalDecision" value="Pending" /> Keep Pending</label>
               </div>
             </div>
 
             <div class="field-group">
               <label>Digital Signature</label>
-
-              <label for="signatureFile" class="signature-upload-btn">
+              <label for="signatureFile" class="upload-signature-btn">
                 <i class="fa-solid fa-upload"></i>
                 <span id="signatureFileName">Upload Signature</span>
               </label>
-
-              <input
-                type="file"
-                id="signatureFile"
-                class="hidden"
-                accept="image/*,.pdf"
-              />
+              <input type="file" id="signatureFile" class="hidden" accept="image/*,.pdf" />
             </div>
 
-            <div class="signoff-actions">
-              <button type="button" class="signoff-cancel-btn" id="cancelSignoffBtn">
-                Cancel
-              </button>
-
-              <button type="submit" class="signoff-confirm-btn">
-                Confirm &amp; Sign-Off
-              </button>
+            <div class="button-row signoff-actions">
+              <button type="button" class="cancel-btn" id="cancelSignoffBtn">Cancel</button>
+              <button type="submit" class="confirm-btn">Confirm & Sign-Off</button>
             </div>
           </form>
         </div>

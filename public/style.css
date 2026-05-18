@@ -2298,3 +2298,61 @@ body[data-role="employee"] .top-actions .employee-only {
 .signoff-confirm-btn:hover {
   background: #059669;
 }
+
+/* VENDOR ASSESSMENT PAGE FIX */
+
+#vendorAssessmentPage.active {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+.vendor-assessment-card,
+.existing-assessment-card,
+.currently-assessing-card,
+.infosec-form-card {
+  width: 100%;
+  max-width: none;
+}
+
+.assessment-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px 32px;
+}
+
+.assessment-create-row {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: 70px;
+}
+
+.assessment-create-row .submit-draft-btn {
+  width: 220px;
+  height: 54px;
+  margin-left: auto;
+}
+
+.existing-assessment-card {
+  margin-top: 0;
+}
+
+.currently-assessing-card h3 {
+  margin-bottom: 10px;
+}
+
+.infosec-form-card {
+  margin-bottom: 40px;
+}
+
+@media (max-width: 900px) {
+  .assessment-meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .assessment-create-row .submit-draft-btn {
+    width: 100%;
+  }
+}
