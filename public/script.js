@@ -295,6 +295,155 @@ function renderAdminDueDiligenceForm(assessment) {
     return;
   }
 
+  function normalizeInformationSecurityAnswers(assessment) {
+  const departmentAnswers = assessment?.department_answers?.length
+    ? assessment.department_answers
+    : (assessment?.department_assessments || []).flatMap((dept) => {
+        return (dept.answers || []).map((answer) => ({
+          ...answer,
+          department_role: dept.department_role
+        }));
+      });
+
+  return departmentAnswers.filter((answer) => {
+    return (
+      answer.department_role === "infosec" ||
+      answer.section_name === "Information Security"
+    );
+  });
+}
+
+function renderAdminInformationSecurityForm(assessment) {
+  const container = document.getElementById("infosecReviewDetailsWrap");
+  if (!container) return;
+
+  if (!assessment) {
+    container.innerHTML = `<p class="empty-cell">Select an assessment to view Information Security responses.</p>`;
+    return;
+  }
+
+  const answers = normalizeInformationSecurityAnswers(assessment);
+  const infosecDept = (assessment.department_assessments || []).find(
+    (dept) => dept.department_role === "infosec"
+  );
+
+  if (!answers.length) {
+    container.innerHTML = `
+      <div class="admin-is-summary-card">
+        <div>
+          <span class="review-label">Department</span>
+          <strong>Information Security</strong>
+        </div>
+
+        <div>
+          <span class="review-label">Status</span>
+          <span class="status-pill ${statusClass(infosecDept?.department_status)}">
+            ${escapeHTML(infosecDept?.department_status || "Pending")}
+          </span>
+        </div>
+
+        <div>
+          <span class="review-label">Submitted By</span>
+          <strong>${escapeHTML(infosecDept?.submitted_by || "-")}</strong>
+        </div>
+
+        <div>
+          <span class="review-label">Date Submitted</span>
+          <strong>${escapeHTML(formatDate(infosecDept?.submitted_at))}</strong>
+        </div>
+      </div>
+
+      <p class="empty-cell">No Information Security answers submitted yet.</p>
+    `;
+    return;
+  }
+
+  let html = `
+    <div class="admin-is-summary-card">
+      <div>
+        <span class="review-label">Department</span>
+        <strong>Information Security</strong>
+      </div>
+
+      <div>
+        <span class="review-label">Status</span>
+        <span class="status-pill ${statusClass(infosecDept?.department_status)}">
+          ${escapeHTML(infosecDept?.department_status || "Pending")}
+        </span>
+      </div>
+
+      <div>
+        <span class="review-label">Submitted By</span>
+        <strong>${escapeHTML(infosecDept?.submitted_by || "-")}</strong>
+      </div>
+
+      <div>
+        <span class="review-label">Date Submitted</span>
+        <strong>${escapeHTML(formatDate(infosecDept?.submitted_at))}</strong>
+      </div>
+    </div>
+
+    <div class="admin-ddf-section">
+      <div class="admin-ddf-section-title">Information Security</div>
+
+      <div class="table-wrap">
+        <table class="admin-ddf-table">
+          <thead>
+            <tr>
+              <th>Question</th>
+              <th>Response</th>
+              <th>Supporting Document</th>
+            </tr>
+          </thead>
+          <tbody>
+  `;
+
+  html += answers.map((answer, index) => {
+    const displayResponse = getDDFDisplayResponse(answer);
+    const rawResponse = String(answer.response || "").trim();
+
+    const showExplanation =
+      answer.explanation &&
+      !["TEXT_ANSWER", "DATE_ANSWER"].includes(rawResponse) &&
+      answer.explanation !== displayResponse;
+
+    return `
+      <tr>
+        <td class="admin-ddf-question">
+          ${index + 1}. ${escapeHTML(answer.question_text || "Question not available.")}
+        </td>
+
+        <td>
+          <div class="admin-ddf-response">
+            ${escapeHTML(displayResponse)}
+          </div>
+
+          ${
+            showExplanation
+              ? `<div class="admin-ddf-explanation">
+                  <strong>Explanation:</strong> ${escapeHTML(answer.explanation)}
+                </div>`
+              : ""
+          }
+        </td>
+
+        <td>
+          ${renderArtifactLink(answer)}
+        </td>
+      </tr>
+    `;
+  }).join("");
+
+  html += `
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  container.innerHTML = html;
+}
+
   const answers = normalizeDDFAnswers(assessment);
   let html = "";
 
@@ -1265,51 +1414,48 @@ function switchAssessmentReviewTab(tabName, clickedButton) {
 
 function populateAssessmentReviewTabs() {
   if (!selectedReviewAssessment) {
-    if (document.getElementById("assessmentReviewDDFBody")) document.getElementById("assessmentReviewDDFBody").innerHTML = `<tr><td colspan="4" class="empty-cell">Select an assessment to view DDF responses.</td></tr>`;
-    if (document.getElementById("infosecReviewDetailsWrap")) document.getElementById("infosecReviewDetailsWrap").innerHTML = `<p class="empty-cell">Select an assessment to view InfoSec form.</p>`;
-    if (document.getElementById("signoffReviewGrid")) document.getElementById("signoffReviewGrid").innerHTML = `<p class="empty-cell">Select an assessment to view sign-off data.</p>`;
+    renderAdminDueDiligenceForm(null);
+    renderAdminInformationSecurityForm(null);
+
+    const signoffGrid = document.getElementById("signoffReviewGrid");
+    if (signoffGrid) {
+      signoffGrid.innerHTML = `<p class="empty-cell">Select an assessment to view sign-off data.</p>`;
+    }
+
     return;
   }
 
+  // Due Diligence Form tab
   renderAdminDueDiligenceForm(selectedReviewAssessment);
 
-  const infosecDept = (selectedReviewAssessment.department_assessments || []).find((dept) => dept.department_role === "infosec");
-  if (document.getElementById("infosecReviewDetailsWrap")) {
-    if (!infosecDept) {
-      document.getElementById("infosecReviewDetailsWrap").innerHTML = `<p class="empty-cell">No Information Security form available for this assessment.</p>`;
-    } else {
-      document.getElementById("infosecReviewDetailsWrap").innerHTML = `
-        <div class="review-row">
-          <span class="review-label">Department</span>
-          <span class="review-value">Information Security</span>
-        </div>
-        <div class="review-row">
-          <span class="review-label">Status</span>
-          <span class="status-pill ${statusClass(infosecDept.department_status)}">${escapeHTML(infosecDept.department_status || "Pending")}</span>
-        </div>
-        <div class="review-row">
-          <span class="review-label">Submitted By</span>
-          <span class="review-value">${escapeHTML(infosecDept.submitted_by || "—")}</span>
-        </div>
-        <div class="review-row">
-          <span class="review-label">Date Submitted</span>
-          <span class="review-value">${escapeHTML(formatDate(infosecDept.submitted_at))}</span>
-        </div>
-      `;
-    }
-  }
+  // Information Security tab
+  renderAdminInformationSecurityForm(selectedReviewAssessment);
 
+  // Sign-Off Sheet tab
   const signoffs = selectedReviewAssessment.department_signoffs || [];
-  if (document.getElementById("signoffReviewGrid")) {
+  const signoffGrid = document.getElementById("signoffReviewGrid");
+
+  if (signoffGrid) {
     if (!signoffs.length) {
-      document.getElementById("signoffReviewGrid").innerHTML = `<p class="empty-cell">No sign-off data available yet.</p>`;
+      signoffGrid.innerHTML = `<p class="empty-cell">No sign-off data available yet.</p>`;
     } else {
-      document.getElementById("signoffReviewGrid").innerHTML = signoffs.map((signoff) => `
+      signoffGrid.innerHTML = signoffs.map((signoff) => `
         <div class="signoff-review-item">
-          <div class="dept-name">${escapeHTML(signoff.department_name || signoff.department || "Unknown")}</div>
+          <div class="dept-name">
+            ${escapeHTML(signoff.department_name || signoff.role_name || signoff.department || "Unknown")}
+          </div>
+
           <div class="signer-info">
-            <span>Name: <strong>${escapeHTML(signoff.signer_name || "—")}</strong></span>
-            <span class="status-pill ${statusClass(signoff.status)}" style="margin-top: 6px;">${escapeHTML(signoff.status || "Pending")}</span>
+            <span>Signer:</span>
+            <strong>${escapeHTML(signoff.signer_name || "-")}</strong>
+
+            <span>Status:</span>
+            <span class="status-pill ${statusClass(signoff.status || signoff.signoff_status)}" style="margin-top: 6px;">
+              ${escapeHTML(signoff.status || signoff.signoff_status || "Pending")}
+            </span>
+
+            <span>Date:</span>
+            <strong>${escapeHTML(formatDate(signoff.signed_at || signoff.created_at))}</strong>
           </div>
         </div>
       `).join("");
