@@ -712,18 +712,8 @@ app.post("/vendors", requireAnyRole(["employee", ...departmentRoles]), async (re
     );
 
     const vendorId = result.insertId;
-    const reviewValues = departmentRoles.map((role) => [vendorId, role, "Pending"]);
 
-    await runQuery(
-      `
-        INSERT IGNORE INTO department_reviews
-        (vendor_id, department_role, review_status)
-        VALUES ?
-      `,
-      [reviewValues]
-    );
-
-    res.json({ message: "Vendor saved. Create a vendor assessment to send it to departments.", vendor_id: vendorId });
+    res.json({ message: "Vendor draft saved. Create a vendor assessment to send it to departments.", vendor_id: vendorId });
   } catch (error) {
     console.error("Insert vendor error:", error);
     res.status(500).json({ message: "Failed to save vendor." });
@@ -789,6 +779,17 @@ app.post("/vendor-assessments", requireAnyRole(["employee", ...departmentRoles])
 
     await runQuery("UPDATE vendor_assessments SET assessment_code = ? WHERE assessment_id = ?", [assessmentCode, assessmentId]);
     await createAllDepartmentAssessments(assessmentId);
+
+    const reviewValues = departmentRoles.map((role) => [vendor_id, role, "Pending"]);
+    await runQuery(
+      `
+        INSERT IGNORE INTO department_reviews
+        (vendor_id, department_role, review_status)
+        VALUES ?
+      `,
+      [reviewValues]
+    );
+
     await runQuery("UPDATE vendors SET overall_status = 'In Review' WHERE vendor_id = ?", [vendor_id]);
 
     res.json({
@@ -1140,7 +1141,11 @@ app.post("/department/assessments/:assessment_id/submit", requireAnyRole(["emplo
 
     await updateMainAssessmentStatus(assessmentId);
 
-    res.json({ message: `${roleLabels[departmentRole] || departmentRole} assessment submitted to Admin for approval.` });
+    res.json({
+      message: departmentRole === "employee"
+        ? "Vendor Information submitted to Admin for approval."
+        : `${roleLabels[departmentRole] || departmentRole} assessment submitted to Admin for approval.`
+    });
   } catch (error) {
     console.error("Submit department assessment error:", error);
     res.status(500).json({ message: "Failed to submit department assessment." });
@@ -2124,4 +2129,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
-    

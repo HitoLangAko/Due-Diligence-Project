@@ -97,6 +97,8 @@ const currentlyAssessingVendor = document.getElementById("currentlyAssessingVend
 const currentlyAssessingServices = document.getElementById("currentlyAssessingServices");
 const infosecForm = document.getElementById("infosecForm");
 const infosecQuestionsWrap = document.getElementById("infosecQuestionsWrap");
+const submitDepartmentFormBtn = document.getElementById("submitDepartmentFormBtn");
+const submitDepartmentFormText = document.getElementById("submitDepartmentFormText");
 const cancelInfoSecAssessmentBtn = document.getElementById("cancelInfoSecAssessmentBtn");
 const createInfoSecAssessmentBtn = document.getElementById("createInfoSecAssessmentBtn");
 const vendorAssessmentNavBtn = document.getElementById("vendorAssessmentNavBtn");
@@ -159,6 +161,14 @@ function showAssessmentSuccess(title, message) {
 
 function hideAssessmentSuccess() {
   if (assessmentSuccessPanel) assessmentSuccessPanel.classList.add("hidden");
+}
+
+function updateAssessmentSubmitButtonText() {
+  if (!submitDepartmentFormText) return;
+
+  submitDepartmentFormText.textContent = currentRole === "employee"
+    ? "Submit Vendor Information"
+    : "Submit Department Form to Admin";
 }
 
 async function api(url, options = {}) {
@@ -224,6 +234,7 @@ function applyRoleLayout() {
 
   populateSignoffRole();
   updateTopActionButton();
+  updateAssessmentSubmitButtonText();
   showPage(defaultPageByRole[currentRole] || "dashboard");
 }
 
@@ -411,13 +422,13 @@ function setupAddVendorForm() {
         });
 
         if (infosecQuestionsWrap) {
-          infosecQuestionsWrap.innerHTML = `<p class="empty-cell">Vendor saved. Select an assessment date and purpose, then click Create Assessment to assign it to departments.</p>`;
+          infosecQuestionsWrap.innerHTML = `<p class="empty-cell">Vendor draft saved. It is not assigned to departments yet. Select an assessment date and purpose, then click Create Assessment.</p>`;
         }
 
         showPage("vendor-assessment");
         showAssessmentSuccess(
           `Success. Vendor ${payload.company_name} saved.`,
-          "Vendor saved. Create a Vendor Assessment to assign it to IT, InfoSec, Management, DPO, HR, and Compliance."
+          "Vendor draft saved. It will only be assigned to IT, InfoSec, Management, DPO, HR, and Compliance after you click Create Assessment."
         );
         return;
       }
@@ -702,6 +713,7 @@ function renderDepartmentFormQuestions() {
   });
 
   infosecQuestionsWrap.innerHTML = html;
+  updateAssessmentSubmitButtonText();
 }
 
 async function createOrStartAssessment() {
@@ -737,11 +749,12 @@ async function createOrStartAssessment() {
       if (infosecVendorSelect) infosecVendorSelect.value = String(assessment.vendor_id);
       if (existingInfoSecAssessment) existingInfoSecAssessment.value = String(assessment.assessment_id);
       await loadEmployeeAssessment(assessment.assessment_id);
+      updateAssessmentSubmitButtonText();
       showAssessmentSuccess(
         `Vendor Assessment ${assessment.assessment_code || "created"} created.`,
-        "Assessment created and assigned to IT, InfoSec, Management, DPO, HR, and Compliance."
+        "Assessment created and assigned to departments. Complete the Vendor Information section, then click Submit Vendor Information so Admin can review it and include it in the Excel report."
       );
-      showToast("Vendor assessment created and assigned to departments.");
+      showToast("Vendor assessment created. You can now submit Vendor Information.");
       return;
     }
 
@@ -810,10 +823,15 @@ async function submitDepartmentForm(event) {
 
   try {
     await api(`/department/assessments/${activeMainAssessment.assessment_id}/submit`, { method: "POST", body: formData });
-    showToast(currentRole === "employee" ? "Vendor Information saved." : `${getRoleLabel()} assessment submitted to Admin.`);
+    showToast(currentRole === "employee" ? "Vendor Information submitted to Admin." : `${getRoleLabel()} assessment submitted to Admin.`);
     if (currentRole === "employee") {
       await loadEmployeeData();
-      showPage("my-submissions");
+      await loadEmployeeAssessment(activeMainAssessment.assessment_id);
+      showAssessmentSuccess(
+        "Vendor Information submitted.",
+        "Vendor Information was sent to Admin for review and will be included in the Excel report."
+      );
+      showPage("vendor-assessment");
     } else {
       await loadDepartmentWorkflowData();
       showPage("pending-approval");
