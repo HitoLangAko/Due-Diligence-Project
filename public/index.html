@@ -76,6 +76,16 @@
             <i class="fa-solid fa-clipboard-list"></i>
             <span>Department Reviews</span>
           </button>
+
+          <button class="nav-link" data-page="assessment-review" data-roles="admin" type="button">
+            <i class="fa-solid fa-magnifying-glass-chart"></i>
+            <span>Assessment Review</span>
+          </button>
+
+          <button class="nav-link" data-page="assessment-summary" data-roles="admin" type="button">
+            <i class="fa-solid fa-chart-pie"></i>
+            <span>Assessment Summary</span>
+          </button>
         </nav>
       </div>
 
@@ -574,6 +584,206 @@
           </div>
         </div>
       </section>
+
+      <section class="page hidden" id="assessmentReviewPage">
+        <div class="content-card assessment-review-card">
+          <div class="section-header">
+            <h3>Assessment Review</h3>
+            <p>Select an existing vendor assessment to review details, company comments.</p>
+          </div>
+
+          <div class="page-grid review-grid">
+            <div class="review-panel">
+              <div class="field-group">
+                <label>Select Vendor Assessment</label>
+                <select id="assessmentReviewVendorSelect">
+                  <option value="">Select vendor assessment</option>
+                </select>
+              </div>
+
+              <div class="review-tabs">
+                <button type="button" class="tab-button active" data-tab="ddf">Due Diligence Form</button>
+                <button type="button" class="tab-button" data-tab="infosec">Information Security</button>
+                <button type="button" class="tab-button" data-tab="signoff">Sign-Off Sheet</button>
+              </div>
+
+              <div class="assessment-meta-info">
+                <div class="review-row">
+                  <span class="review-label">Assessment Code</span>
+                  <span id="assessmentReviewCode" class="review-value">—</span>
+                </div>
+                <div class="review-row">
+                  <span class="review-label">Vendor</span>
+                  <span id="assessmentReviewVendorName" class="review-value">—</span>
+                </div>
+                <div class="review-row">
+                  <span class="review-label">Purpose</span>
+                  <span id="assessmentReviewPurpose" class="review-value">—</span>
+                </div>
+                <div class="review-row">
+                  <span class="review-label">Assessment Date</span>
+                  <span id="assessmentReviewDate" class="review-value">—</span>
+                </div>
+                <div class="review-row">
+                  <span class="review-label">Current Status</span>
+                  <span id="assessmentReviewStatus" class="status-pill">Pending</span>
+                </div>
+                <div class="review-row full">
+                  <span class="review-label">Services / Scope</span>
+                  <span id="assessmentReviewServices" class="review-value">—</span>
+                </div>
+              </div>
+
+              <div id="tabDDFContent" class="tab-content active">
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Department</th>
+                        <th>Status</th>
+                        <th>Reviewed By</th>
+                        <th>Date</th>
+                      </tr>
+                    </thead>
+                    <tbody id="assessmentReviewDDFBody">
+                      <tr><td colspan="4" class="empty-cell">No DDF responses available.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div id="tabInfosecContent" class="tab-content hidden">
+                <div class="infosec-review-details" id="infosecReviewDetailsWrap">
+                  <p class="empty-cell">No Information Security form available for this assessment.</p>
+                </div>
+              </div>
+
+              <div id="tabSignoffContent" class="tab-content hidden">
+                <div class="signoff-review-card">
+                  <h4>Final Sign-Off Authorization</h4>
+                  <div class="signoff-review-grid" id="signoffReviewGrid">
+                    <p class="empty-cell">No sign-off data available yet.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="review-actions">
+                <button type="button" class="submit-draft-btn" id="finalizeAssessmentBtn" disabled>
+                  Finalize Assessment
+                  <i class="fa-solid fa-arrow-right"></i>
+                </button>
+              </div>
+            </div>
+
+            <aside class="comment-panel">
+              <div class="comment-card">
+                <h4>Company Comment</h4>
+                <p id="assessmentReviewComment" class="comment-text">Select a vendor assessment to view company comments here.</p>
+              </div>
+
+              <div class="comment-card">
+                <h4>Review Notes</h4>
+                <p class="comment-text">
+                  
+                </p>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section class="page hidden" id="reportingSignoffPage">
+        <div class="content-card reporting-signoff-card">
+          <div class="section-header">
+            <h3>Reporting &amp; Sign-off</h3>
+            <p>Final Sign-off Authorization status for the selected assessment.</p>
+          </div>
+
+          <div class="page-grid signoff-grid">
+            <div class="summary-card">
+              <div class="review-row">
+                <span class="review-label">Assessment</span>
+                <span id="reportingSignoffAssessmentName" class="review-value">Select an assessment first.</span>
+              </div>
+              <div class="review-row">
+                <span class="review-label">Vendor</span>
+                <span id="reportingSignoffVendorName" class="review-value">—</span>
+              </div>
+              <div class="review-row">
+                <span class="review-label">Overall Status</span>
+                <span id="reportingSignoffOverallStatus" class="status-pill">Pending</span>
+              </div>
+              <div class="review-row full">
+                <span class="review-label">Summary</span>
+                <span id="reportingSignoffNotes" class="review-value">After all departments submit sign-off, this page displays the final authorization status.</span>
+              </div>
+            </div>
+
+            <div class="signoff-status-card">
+              <h4>Department Sign-off Status</h4>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Department</th>
+                      <th>Status</th>
+                      <th>Signed By</th>
+                      <th>Date</th>
+                    </tr>
+                  </thead>
+                  <tbody id="reportingSignoffStatusList">
+                    <tr><td colspan="4" class="empty-cell">No sign-off data available yet.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page hidden" id="assessmentSummaryPage">
+        <div class="content-card assessment-summary-card">
+          <div class="section-header">
+            <h3>Assessment Summary</h3>
+            <p>Review completion status of all assessment forms and provide final approval or rejection.</p>
+          </div>
+
+          <div class="summary-card summary-overview">
+            <div class="summary-top-row">
+              <div class="summary-item">
+                <span class="summary-label">Vendor Name:</span>
+                <span id="assessmentSummaryVendorName" class="summary-value">—</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">Service Type:</span>
+                <span id="assessmentSummaryServiceType" class="summary-value">—</span>
+              </div>
+            </div>
+
+            <div class="summary-completion-grid">
+              <div class="completion-item">
+                <span class="completion-label">Due Diligence Form:</span>
+                <span id="summaryDDFStatus" class="completion-status">Pending</span>
+              </div>
+              <div class="completion-item">
+                <span class="completion-label">Information Security:</span>
+                <span id="summaryInfosecStatus" class="completion-status">Pending</span>
+              </div>
+              <div class="completion-item">
+                <span class="completion-label">Sign-Off Sheet:</span>
+                <span id="summarySignoffStatus" class="completion-status">Pending</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="summary-actions">
+            <button type="button" class="clear-form-btn" id="rejectAssessmentBtn" disabled>Reject</button>
+            <button type="button" class="submit-draft-btn" id="approveAssessmentBtn" disabled>Approve</button>
+          </div>
+        </div>
+      </section>
+      
+
 
       <section class="page" id="departmentReviewsPage">
         <div class="content-card">

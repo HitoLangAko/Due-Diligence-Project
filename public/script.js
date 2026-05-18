@@ -10,6 +10,11 @@ let adminRows = [];
 let activeMainAssessment = null;
 let activeDepartmentAssessment = null;
 let activeDepartmentAnswers = {};
+let adminReviewRows = [];
+let selectedReviewAssessment = null;
+let reportingSignoffRows = [];
+let selectedReportingAssessment = null;
+let assessmentSummaryData = null;
 
 const roleLabels = {
   employee: "Employee",
@@ -44,7 +49,10 @@ const customPageLabels = {
   "pending-approval": "Pending Approval",
   signoff: "Form for Sign-off",
   "all-vendors": "All Vendors",
-  "department-reviews": "Department Reviews"
+  "department-reviews": "Department Reviews",
+  "assessment-review": "Assessment Review",
+  "reporting-signoff": "Reporting Signoff",
+  "assessment-summary": "Assessment Summary"
 };
 
 const pageTitle = document.getElementById("pageTitle");
@@ -106,6 +114,28 @@ const signoffForm = document.getElementById("signoffForm");
 const signatureFile = document.getElementById("signatureFile");
 const signatureFileName = document.getElementById("signatureFileName");
 const cancelSignoffBtn = document.getElementById("cancelSignoffBtn");
+const assessmentReviewVendorSelect = document.getElementById("assessmentReviewVendorSelect");
+const assessmentReviewDetailsWrap = document.getElementById("assessmentReviewDetailsWrap");
+const assessmentReviewCode = document.getElementById("assessmentReviewCode");
+const assessmentReviewVendorName = document.getElementById("assessmentReviewVendorName");
+const assessmentReviewPurpose = document.getElementById("assessmentReviewPurpose");
+const assessmentReviewDate = document.getElementById("assessmentReviewDate");
+const assessmentReviewStatus = document.getElementById("assessmentReviewStatus");
+const assessmentReviewServices = document.getElementById("assessmentReviewServices");
+const assessmentReviewComment = document.getElementById("assessmentReviewComment");
+const finalizeAssessmentBtn = document.getElementById("finalizeAssessmentBtn");
+const reportingSignoffAssessmentName = document.getElementById("reportingSignoffAssessmentName");
+const reportingSignoffVendorName = document.getElementById("reportingSignoffVendorName");
+const reportingSignoffOverallStatus = document.getElementById("reportingSignoffOverallStatus");
+const reportingSignoffNotes = document.getElementById("reportingSignoffNotes");
+const reportingSignoffStatusList = document.getElementById("reportingSignoffStatusList");
+const assessmentSummaryVendorName = document.getElementById("assessmentSummaryVendorName");
+const assessmentSummaryServiceType = document.getElementById("assessmentSummaryServiceType");
+const summaryDDFStatus = document.getElementById("summaryDDFStatus");
+const summaryInfosecStatus = document.getElementById("summaryInfosecStatus");
+const summarySignoffStatus = document.getElementById("summarySignoffStatus");
+const rejectAssessmentBtn = document.getElementById("rejectAssessmentBtn");
+const approveAssessmentBtn = document.getElementById("approveAssessmentBtn");
 
 function getRoleLabel(role = currentRole) {
   return roleLabels[role] || role || "User";
@@ -287,6 +317,15 @@ async function refreshCurrentPage(_page = getCurrentPage()) {
     }
     if (currentRole === "admin") {
       await loadAdminData();
+      if (_page === "assessment-review") {
+        await loadAdminReviewData();
+      }
+      if (_page === "reporting-signoff") {
+        await loadReportingSignoffData();
+      }
+      if (_page === "assessment-summary") {
+        await loadAssessmentSummaryData();
+      }
     }
   } catch (error) {
     console.error(error);
@@ -931,6 +970,296 @@ function renderDepartmentReviewsTable() {
   `).join("");
 }
 
+
+async function loadAdminReviewData() {
+  const data = await api("/admin/review-assessments");
+  adminReviewRows = Array.isArray(data) ? data : data.assessments || [];
+  renderAssessmentReviewPage();
+}
+
+async function loadReportingSignoffData() {
+  const selectedId = selectedReviewAssessment?.assessment_id || selectedReportingAssessment?.assessment_id || "";
+  const url = selectedId ? `/admin/reporting-signoff?assessment_id=${encodeURIComponent(selectedId)}` : "/admin/reporting-signoff";
+  const data = await api(url);
+  reportingSignoffRows = Array.isArray(data) ? data : data.signoffs || data.departments || [];
+  selectedReportingAssessment = data.assessment || selectedReviewAssessment || (reportingSignoffRows[0] ? reportingSignoffRows[0].assessment : null);
+  renderReportingSignoffPage();
+}
+
+async function loadAssessmentSummaryData() {
+  const selectedId = selectedReviewAssessment?.assessment_id || selectedReportingAssessment?.assessment_id || "";
+  const url = selectedId ? `/admin/assessment-summary?assessment_id=${encodeURIComponent(selectedId)}` : "/admin/assessment-summary";
+  assessmentSummaryData = await api(url);
+  renderAssessmentSummaryPage();
+}
+
+function renderAssessmentReviewPage() {
+  if (!assessmentReviewVendorSelect) return;
+
+  assessmentReviewVendorSelect.innerHTML = `<option value="">Select vendor assessment</option>`;
+  adminReviewRows.forEach((item) => {
+    assessmentReviewVendorSelect.innerHTML += `
+      <option value="${item.assessment_id}">${escapeHTML(item.assessment_code)} - ${escapeHTML(item.company_name)}</option>
+    `;
+  });
+
+  if (selectedReviewAssessment) {
+    assessmentReviewVendorSelect.value = String(selectedReviewAssessment.assessment_id);
+  }
+
+  if (!selectedReviewAssessment && adminReviewRows.length) {
+    selectedReviewAssessment = adminReviewRows[0];
+    assessmentReviewVendorSelect.value = String(selectedReviewAssessment.assessment_id);
+  }
+
+  updateAssessmentReviewDetails();
+  populateAssessmentReviewTabs();
+}
+
+function handleAssessmentReviewSelection() {
+  if (!assessmentReviewVendorSelect) return;
+  const selectedId = assessmentReviewVendorSelect.value;
+  selectedReviewAssessment = adminReviewRows.find((item) => String(item.assessment_id) === String(selectedId)) || null;
+  selectedReportingAssessment = selectedReviewAssessment;
+  updateAssessmentReviewDetails();
+  populateAssessmentReviewTabs();
+}
+
+function switchAssessmentReviewTab(tabName, clickedButton) {
+  document.querySelectorAll("[data-tab]").forEach((btn) => btn.classList.remove("active"));
+  document.querySelectorAll(".tab-content").forEach((content) => content.classList.add("hidden"));
+
+  if (clickedButton) clickedButton.classList.add("active");
+
+  const targetContent = {
+    ddf: document.getElementById("tabDDFContent"),
+    infosec: document.getElementById("tabInfosecContent"),
+    signoff: document.getElementById("tabSignoffContent")
+  }[tabName];
+
+  if (targetContent) targetContent.classList.remove("hidden");
+}
+
+function populateAssessmentReviewTabs() {
+  if (!selectedReviewAssessment) {
+    if (document.getElementById("assessmentReviewDDFBody")) document.getElementById("assessmentReviewDDFBody").innerHTML = `<tr><td colspan="4" class="empty-cell">Select an assessment to view DDF responses.</td></tr>`;
+    if (document.getElementById("infosecReviewDetailsWrap")) document.getElementById("infosecReviewDetailsWrap").innerHTML = `<p class="empty-cell">Select an assessment to view InfoSec form.</p>`;
+    if (document.getElementById("signoffReviewGrid")) document.getElementById("signoffReviewGrid").innerHTML = `<p class="empty-cell">Select an assessment to view sign-off data.</p>`;
+    return;
+  }
+
+  const ddfDepts = (selectedReviewAssessment.department_assessments || []).filter((dept) => dept.department_role !== "infosec");
+  if (document.getElementById("assessmentReviewDDFBody")) {
+    if (!ddfDepts.length) {
+      document.getElementById("assessmentReviewDDFBody").innerHTML = `<tr><td colspan="4" class="empty-cell">No DDF responses available.</td></tr>`;
+    } else {
+      document.getElementById("assessmentReviewDDFBody").innerHTML = ddfDepts.map((dept) => `
+        <tr>
+          <td>${escapeHTML(getRoleLabel(dept.department_role))}</td>
+          <td><span class="status-pill ${statusClass(dept.department_status)}">${escapeHTML(dept.department_status || "Pending")}</span></td>
+          <td>${escapeHTML(dept.submitted_by || "—")}</td>
+          <td>${escapeHTML(formatDate(dept.submitted_at))}</td>
+        </tr>
+      `).join("");
+    }
+  }
+
+  const infosecDept = (selectedReviewAssessment.department_assessments || []).find((dept) => dept.department_role === "infosec");
+  if (document.getElementById("infosecReviewDetailsWrap")) {
+    if (!infosecDept) {
+      document.getElementById("infosecReviewDetailsWrap").innerHTML = `<p class="empty-cell">No Information Security form available for this assessment.</p>`;
+    } else {
+      document.getElementById("infosecReviewDetailsWrap").innerHTML = `
+        <div class="review-row">
+          <span class="review-label">Department</span>
+          <span class="review-value">Information Security</span>
+        </div>
+        <div class="review-row">
+          <span class="review-label">Status</span>
+          <span class="status-pill ${statusClass(infosecDept.department_status)}">${escapeHTML(infosecDept.department_status || "Pending")}</span>
+        </div>
+        <div class="review-row">
+          <span class="review-label">Submitted By</span>
+          <span class="review-value">${escapeHTML(infosecDept.submitted_by || "—")}</span>
+        </div>
+        <div class="review-row">
+          <span class="review-label">Date Submitted</span>
+          <span class="review-value">${escapeHTML(formatDate(infosecDept.submitted_at))}</span>
+        </div>
+      `;
+    }
+  }
+
+  const signoffs = selectedReviewAssessment.department_signoffs || [];
+  if (document.getElementById("signoffReviewGrid")) {
+    if (!signoffs.length) {
+      document.getElementById("signoffReviewGrid").innerHTML = `<p class="empty-cell">No sign-off data available yet.</p>`;
+    } else {
+      document.getElementById("signoffReviewGrid").innerHTML = signoffs.map((signoff) => `
+        <div class="signoff-review-item">
+          <div class="dept-name">${escapeHTML(signoff.department_name || signoff.department || "Unknown")}</div>
+          <div class="signer-info">
+            <span>Name: <strong>${escapeHTML(signoff.signer_name || "—")}</strong></span>
+            <span class="status-pill ${statusClass(signoff.status)}" style="margin-top: 6px;">${escapeHTML(signoff.status || "Pending")}</span>
+          </div>
+        </div>
+      `).join("");
+    }
+  }
+}
+
+function updateAssessmentReviewDetails() {
+  if (!assessmentReviewComment) return;
+
+  if (!selectedReviewAssessment) {
+    if (assessmentReviewCode) assessmentReviewCode.textContent = "—";
+    if (assessmentReviewVendorName) assessmentReviewVendorName.textContent = "—";
+    if (assessmentReviewPurpose) assessmentReviewPurpose.textContent = "—";
+    if (assessmentReviewDate) assessmentReviewDate.textContent = "—";
+    if (assessmentReviewStatus) assessmentReviewStatus.textContent = "Pending";
+    if (assessmentReviewServices) assessmentReviewServices.textContent = "—";
+    assessmentReviewComment.textContent = "Select a vendor assessment to view company comments here.";
+    if (finalizeAssessmentBtn) finalizeAssessmentBtn.disabled = true;
+    return;
+  }
+
+  if (assessmentReviewCode) assessmentReviewCode.textContent = selectedReviewAssessment.assessment_code || "—";
+  if (assessmentReviewVendorName) assessmentReviewVendorName.textContent = selectedReviewAssessment.company_name || "—";
+  if (assessmentReviewPurpose) assessmentReviewPurpose.textContent = selectedReviewAssessment.purpose || "—";
+  if (assessmentReviewDate) assessmentReviewDate.textContent = formatDate(selectedReviewAssessment.assessment_date);
+  if (assessmentReviewStatus) {
+    assessmentReviewStatus.textContent = selectedReviewAssessment.overall_status || "Pending";
+    assessmentReviewStatus.className = `status-pill ${statusClass(selectedReviewAssessment.overall_status)}`;
+  }
+  if (assessmentReviewServices) assessmentReviewServices.textContent = selectedReviewAssessment.product_services_offered || "—";
+  assessmentReviewComment.textContent = selectedReviewAssessment.company_comment || "No company comment available.";
+
+  if (finalizeAssessmentBtn) finalizeAssessmentBtn.disabled = false;
+}
+
+async function finalizeAssessment() {
+  if (!selectedReviewAssessment) {
+    alert("Please select an assessment to finalize.");
+    return;
+  }
+
+  try {
+    await api(`/admin/assessments/${selectedReviewAssessment.assessment_id}/finalize`, {
+      method: "POST",
+      body: JSON.stringify({ action: "finalize" })
+    });
+    selectedReportingAssessment = selectedReviewAssessment;
+    showToast("Assessment finalized and moved to Reporting & Sign-off.");
+    showPage("reporting-signoff");
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+function renderReportingSignoffPage() {
+  if (!reportingSignoffStatusList || !reportingSignoffNotes) return;
+
+  const assessment = selectedReportingAssessment || (reportingSignoffRows[0] ? reportingSignoffRows[0].assessment : null);
+  if (reportingSignoffAssessmentName) reportingSignoffAssessmentName.textContent = assessment?.assessment_code || "No assessment selected";
+  if (reportingSignoffVendorName) reportingSignoffVendorName.textContent = assessment?.company_name || "—";
+  if (reportingSignoffOverallStatus) {
+    reportingSignoffOverallStatus.textContent = assessment?.overall_status || "Pending";
+    reportingSignoffOverallStatus.className = `status-pill ${statusClass(assessment?.overall_status)}`;
+  }
+
+  if (!reportingSignoffRows.length) {
+    reportingSignoffStatusList.innerHTML = `<tr><td colspan="4" class="empty-cell">No sign-off data available yet.</td></tr>`;
+    if (reportingSignoffNotes) reportingSignoffNotes.textContent = "No sign-off submissions are available for this assessment.";
+    return;
+  }
+
+  const allDone = reportingSignoffRows.every((item) => ["Signed", "Approved"].includes(item.status));
+  if (reportingSignoffNotes) {
+    reportingSignoffNotes.textContent = allDone
+      ? "All departments have submitted their sign-off. Review the summary for final approval or rejection."
+      : "Waiting for all departments to submit sign-off. The list updates as each department submits.";
+  }
+
+  reportingSignoffStatusList.innerHTML = reportingSignoffRows.map((item) => `
+    <tr>
+      <td>${escapeHTML(item.department_name || item.department || "Unknown")}</td>
+      <td><span class="status-pill ${statusClass(item.status)}">${escapeHTML(item.status || "Pending")}</span></td>
+      <td>${escapeHTML(item.signer_name || item.submitted_by || "—")}</td>
+      <td>${escapeHTML(formatDate(item.signed_at || item.updated_at || item.submitted_at))}</td>
+    </tr>
+  `).join("");
+}
+
+function renderAssessmentSummaryPage() {
+  if (!assessmentSummaryData || !assessmentSummaryData.assessment) {
+    if (assessmentSummaryVendorName) assessmentSummaryVendorName.textContent = "—";
+    if (assessmentSummaryServiceType) assessmentSummaryServiceType.textContent = "—";
+    if (summaryDDFStatus) summaryDDFStatus.textContent = "Pending";
+    if (summaryInfosecStatus) summaryInfosecStatus.textContent = "Pending";
+    if (summarySignoffStatus) summarySignoffStatus.textContent = "Pending";
+    if (rejectAssessmentBtn) rejectAssessmentBtn.disabled = true;
+    if (approveAssessmentBtn) approveAssessmentBtn.disabled = true;
+    return;
+  }
+
+  const assessment = assessmentSummaryData.assessment;
+  const deptAssessments = assessmentSummaryData.department_assessments || [];
+
+  if (assessmentSummaryVendorName) assessmentSummaryVendorName.textContent = assessment.company_name || "—";
+  if (assessmentSummaryServiceType) assessmentSummaryServiceType.textContent = assessment.product_services_offered || "—";
+
+  const ddfDepts = deptAssessments.filter((dept) => dept.department_role !== "infosec");
+  const ddfComplete = ddfDepts.length > 0 && ddfDepts.every((dept) => ["Approved", "Completed", "Signed", "Pending Admin Approval"].includes(dept.department_status));
+  const ddfStatus = ddfComplete ? "Complete" : ddfDepts.length > 0 ? "In Progress" : "Pending";
+  if (summaryDDFStatus) {
+    summaryDDFStatus.textContent = ddfStatus;
+    summaryDDFStatus.className = `completion-status ${ddfComplete ? "completed" : ""}`;
+  }
+
+  const infosecDept = deptAssessments.find((dept) => dept.department_role === "infosec");
+  const infosecComplete = infosecDept && ["Approved", "Completed", "Signed", "Pending Admin Approval"].includes(infosecDept.department_status);
+  const infosecStatus = infosecComplete ? "Cleared" : infosecDept ? "In Progress" : "Pending";
+  if (summaryInfosecStatus) {
+    summaryInfosecStatus.textContent = infosecStatus;
+    summaryInfosecStatus.className = `completion-status ${infosecComplete ? "completed" : ""}`;
+  }
+
+  const signoffs = assessmentSummaryData.department_signoffs || [];
+  const signoffComplete = signoffs.length > 0 && signoffs.every((s) => ["Signed", "Approved"].includes(s.status));
+  const signoffStatus = signoffComplete ? "Signed and Approved" : signoffs.length > 0 ? "In Progress" : "Pending";
+  if (summarySignoffStatus) {
+    summarySignoffStatus.textContent = signoffStatus;
+    summarySignoffStatus.className = `completion-status ${signoffComplete ? "completed" : ""}`;
+  }
+
+  const hasProgress = ddfDepts.length > 0 || infosecDept || signoffs.length > 0;
+  if (rejectAssessmentBtn) rejectAssessmentBtn.disabled = !hasProgress;
+  if (approveAssessmentBtn) approveAssessmentBtn.disabled = !hasProgress;
+}
+
+async function submitAssessmentDecision(decision) {
+  if (!assessmentSummaryData?.assessment?.assessment_id) {
+    alert("No assessment is selected for final decision.");
+    return;
+  }
+
+  if (!confirm(`Are you sure you want to ${decision.toLowerCase()} this assessment?`)) {
+    return;
+  }
+
+  try {
+    await api(`/admin/assessments/${assessmentSummaryData.assessment.assessment_id}/decision`, {
+      method: "POST",
+      body: JSON.stringify({ decision })
+    });
+    showToast(`Assessment ${decision} submitted.`);
+    await loadAssessmentSummaryData();
+    await loadAdminData();
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
 function populateSignoffRole() {
   const signoffRole = document.getElementById("signoffRole");
   if (!signoffRole) return;
@@ -1039,6 +1368,10 @@ function setupEvents() {
     button.addEventListener("click", () => showPage(button.dataset.page));
   });
 
+  document.querySelectorAll("[data-tab]").forEach((tabBtn) => {
+    tabBtn.addEventListener("click", () => switchAssessmentReviewTab(tabBtn.dataset.tab, tabBtn));
+  });
+
   if (refreshBtn) {
     refreshBtn.addEventListener("click", async () => {
       if (currentRole === "admin") {
@@ -1116,6 +1449,10 @@ function setupEvents() {
   if (createInfoSecAssessmentBtn) createInfoSecAssessmentBtn.addEventListener("click", createOrStartAssessment);
   if (cancelInfoSecAssessmentBtn) cancelInfoSecAssessmentBtn.addEventListener("click", () => showPage(isDepartmentRole() ? "vendor-queue" : "my-submissions"));
   if (infosecForm) infosecForm.addEventListener("submit", submitDepartmentForm);
+  if (assessmentReviewVendorSelect) assessmentReviewVendorSelect.addEventListener("change", handleAssessmentReviewSelection);
+  if (finalizeAssessmentBtn) finalizeAssessmentBtn.addEventListener("click", finalizeAssessment);
+  if (approveAssessmentBtn) approveAssessmentBtn.addEventListener("click", () => submitAssessmentDecision("Approved"));
+  if (rejectAssessmentBtn) rejectAssessmentBtn.addEventListener("click", () => submitAssessmentDecision("Rejected"));
   if (signatureFile) signatureFile.addEventListener("change", () => {
     signatureFileName.textContent = signatureFile.files.length > 0 ? signatureFile.files[0].name : "Upload Signature";
   });

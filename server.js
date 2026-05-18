@@ -1415,6 +1415,319 @@ app.get("/admin/department-assessments", requireRole("admin"), async (_req, res)
   }
 });
 
+
+
+async function getAdminAssessmentBundle(assessmentId = null) {
+  let assessmentRows;
+
+  if (assessmentId) {
+    assessmentRows = await runQuery(
+      `
+        SELECT
+          va.assessment_id,
+          va.assessment_code,
+          va.vendor_id,
+          va.purpose,
+          va.assessment_date,
+          va.overall_status,
+          va.created_at,
+          va.updated_at,
+          v.company_name,
+          v.company_website,
+          v.product_services_offered,
+          v.contact_person_name,
+          v.contact_email,
+          v.contact_phone,
+          u.full_name AS created_by
+        FROM vendor_assessments va
+        JOIN vendors v ON va.vendor_id = v.vendor_id
+        LEFT JOIN users u ON va.created_by_user_id = u.user_id
+        WHERE va.assessment_id = ?
+        LIMIT 1
+      `,
+      [assessmentId]
+    );
+  } else {
+    assessmentRows = await runQuery(
+      `
+        SELECT
+          va.assessment_id,
+          va.assessment_code,
+          va.vendor_id,
+          va.purpose,
+          va.assessment_date,
+          va.overall_status,
+          va.created_at,
+          va.updated_at,
+          v.company_name,
+          v.company_website,
+          v.product_services_offered,
+          v.contact_person_name,
+          v.contact_email,
+          v.contact_phone,
+          u.full_name AS created_by
+        FROM vendor_assessments va
+        JOIN vendors v ON va.vendor_id = v.vendor_id
+        LEFT JOIN users u ON va.created_by_user_id = u.user_id
+        ORDER BY va.updated_at DESC, va.created_at DESC
+        LIMIT 1
+      `
+    );
+  }
+
+  if (!assessmentRows.length) return null;
+
+  const assessment = assessmentRows[0];
+
+  const departmentAssessments = await runQuery(
+    `
+      SELECT
+        da.department_assessment_id,
+        da.assessment_id,
+        da.department_role,
+        da.status AS department_status,
+        da.submitted_at,
+        da.approved_at,
+        da.admin_comment,
+        u.full_name AS submitted_by
+      FROM department_assessments da
+      LEFT JOIN users u ON da.submitted_by_user_id = u.user_id
+      WHERE da.assessment_id = ?
+      ORDER BY
+        CASE da.department_role
+          WHEN 'employee' THEN 1
+          WHEN 'management' THEN 2
+          WHEN 'it' THEN 3
+          WHEN 'compliance' THEN 4
+          WHEN 'dpo' THEN 5
+          WHEN 'hr' THEN 6
+          WHEN 'infosec' THEN 7
+          ELSE 8
+        END
+    `,
+    [assessment.assessment_id]
+  );
+
+  const rawSignoffs = await runQuery(
+    `
+      SELECT
+        s.signoff_id,
+        s.assessment_id,
+        s.department_assessment_id,
+        s.role_name AS department_name,
+        s.role_name AS department,
+        s.signer_name,
+        s.signoff_status AS status,
+        s.signature_file_name,
+        s.signature_file_path,
+        s.signed_at,
+        s.created_at,
+        u.full_name AS submitted_by
+      FROM sign_offs s
+      LEFT JOIN users u ON s.created_by_user_id = u.user_id
+      WHERE s.assessment_id = ?
+      ORDER BY s.created_at DESC
+    `,
+    [assessment.assessment_id]
+  );
+
+  const usedSignoffIds = new Set();
+  const departmentSignoffs = departmentAssessments
+    .filter((dept) => dept.department_role !== "employee")
+    .map((dept) => {
+      const expectedLabel = roleLabels[dept.department_role] || dept.department_role;
+      const match = rawSignoffs.find((signoff) => {
+        if (usedSignoffIds.has(signoff.signoff_id)) return false;
+        return Number(signoff.department_assessment_id) === Number(dept.department_assessment_id)
+          || String(signoff.department_name || "").toLowerCase() === String(expectedLabel).toLowerCase();
+      });
+
+      if (match) {
+        usedSignoffIds.add(match.signoff_id);
+        return {
+          ...match,
+          department_name: expectedLabel,
+          department: expectedLabel,
+          status: match.status || "Pending"
+        };
+      }
+
+      return {
+        assessment_id: assessment.assessment_id,
+        department_assessment_id: dept.department_assessment_id,
+        department_name: expectedLabel,
+        department: expectedLabel,
+        signer_name: null,
+        status: "Pending",
+        signed_at: null,
+        submitted_by: dept.submitted_by || null
+      };
+    });
+
+  rawSignoffs.forEach((signoff) => {
+    if (!usedSignoffIds.has(signoff.signoff_id)) {
+      departmentSignoffs.push(signoff);
+    }
+  });
+
+  const commentParts = [];
+  departmentAssessments.forEach((item) => {
+    if (item.admin_comment) {
+      commentParts.push(`${roleLabels[item.department_role] || item.department_role}: ${item.admin_comment}`);
+    }
+  });
+
+  return {
+    ...assessment,
+    company_comment: commentParts.join("\n") || null,
+    department_assessments: departmentAssessments,
+    department_signoffs: departmentSignoffs
+  };
+}
+
+app.get("/admin/review-assessments", requireRole("admin"), async (_req, res) => {
+  try {
+    const assessments = await runQuery(
+      `
+        SELECT
+          va.assessment_id,
+          va.assessment_code,
+          va.vendor_id,
+          va.purpose,
+          va.assessment_date,
+          va.overall_status,
+          va.created_at,
+          va.updated_at,
+          v.company_name,
+          v.company_website,
+          v.product_services_offered,
+          v.contact_person_name,
+          v.contact_email,
+          v.contact_phone,
+          u.full_name AS created_by
+        FROM vendor_assessments va
+        JOIN vendors v ON va.vendor_id = v.vendor_id
+        LEFT JOIN users u ON va.created_by_user_id = u.user_id
+        ORDER BY va.updated_at DESC, va.created_at DESC
+      `
+    );
+
+    const bundles = [];
+    for (const assessment of assessments) {
+      const bundle = await getAdminAssessmentBundle(assessment.assessment_id);
+      if (bundle) bundles.push(bundle);
+    }
+
+    res.json(bundles);
+  } catch (error) {
+    console.error("Fetch admin review assessments error:", error);
+    res.status(500).json({ message: "Failed to load assessment review data." });
+  }
+});
+
+app.get("/admin/reporting-signoff", requireRole("admin"), async (req, res) => {
+  try {
+    const bundle = await getAdminAssessmentBundle(req.query.assessment_id || null);
+
+    if (!bundle) {
+      return res.json({ assessment: null, signoffs: [] });
+    }
+
+    res.json({
+      assessment: {
+        assessment_id: bundle.assessment_id,
+        assessment_code: bundle.assessment_code,
+        company_name: bundle.company_name,
+        product_services_offered: bundle.product_services_offered,
+        overall_status: bundle.overall_status
+      },
+      signoffs: bundle.department_signoffs
+    });
+  } catch (error) {
+    console.error("Fetch reporting signoff error:", error);
+    res.status(500).json({ message: "Failed to load reporting sign-off data." });
+  }
+});
+
+app.get("/admin/assessment-summary", requireRole("admin"), async (req, res) => {
+  try {
+    const bundle = await getAdminAssessmentBundle(req.query.assessment_id || null);
+
+    if (!bundle) {
+      return res.json({ assessment: null, department_assessments: [], department_signoffs: [] });
+    }
+
+    res.json({
+      assessment: {
+        assessment_id: bundle.assessment_id,
+        assessment_code: bundle.assessment_code,
+        company_name: bundle.company_name,
+        product_services_offered: bundle.product_services_offered,
+        overall_status: bundle.overall_status
+      },
+      department_assessments: bundle.department_assessments,
+      department_signoffs: bundle.department_signoffs
+    });
+  } catch (error) {
+    console.error("Fetch assessment summary error:", error);
+    res.status(500).json({ message: "Failed to load assessment summary." });
+  }
+});
+
+app.post("/admin/assessments/:assessment_id/finalize", requireRole("admin"), async (req, res) => {
+  const assessmentId = req.params.assessment_id;
+
+  try {
+    const rows = await runQuery("SELECT * FROM vendor_assessments WHERE assessment_id = ?", [assessmentId]);
+
+    if (!rows.length) {
+      return res.status(404).json({ message: "Vendor assessment not found." });
+    }
+
+    await runQuery(
+      `UPDATE vendor_assessments SET overall_status = 'Pending Admin Approval' WHERE assessment_id = ?`,
+      [assessmentId]
+    );
+
+    res.json({ message: "Assessment finalized for reporting and sign-off." });
+  } catch (error) {
+    console.error("Finalize assessment error:", error);
+    res.status(500).json({ message: "Failed to finalize assessment." });
+  }
+});
+
+app.post("/admin/assessments/:assessment_id/decision", requireRole("admin"), async (req, res) => {
+  const assessmentId = req.params.assessment_id;
+  const { decision } = req.body;
+
+  if (!["Approved", "Rejected"].includes(decision)) {
+    return res.status(400).json({ message: "Invalid decision." });
+  }
+
+  try {
+    const rows = await runQuery("SELECT * FROM vendor_assessments WHERE assessment_id = ?", [assessmentId]);
+
+    if (!rows.length) {
+      return res.status(404).json({ message: "Vendor assessment not found." });
+    }
+
+    await runQuery(
+      `UPDATE vendor_assessments SET overall_status = ? WHERE assessment_id = ?`,
+      [decision, assessmentId]
+    );
+
+    await runQuery(
+      `UPDATE vendors SET overall_status = ? WHERE vendor_id = ?`,
+      [decision === "Approved" ? "Completed" : "Rejected", rows[0].vendor_id]
+    );
+
+    res.json({ message: `Assessment ${decision.toLowerCase()} successfully.` });
+  } catch (error) {
+    console.error("Submit assessment decision error:", error);
+    res.status(500).json({ message: "Failed to save assessment decision." });
+  }
+});
+
 /* ADMIN EXCEL EXPORT */
 
 function thinBorder() {
