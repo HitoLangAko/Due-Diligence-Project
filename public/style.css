@@ -3067,3 +3067,58 @@ html body[data-role="employee"] #vendorAssessmentPage #submitDepartmentFormBtn {
   border-color: #2f66e8;
   box-shadow: 0 0 0 3px rgba(47, 102, 232, 0.12);
 }
+
+/* Fix Supporting Document file input box */
+.content-card input[type="file"],
+.vendor-info-file,
+.is-artifact {
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  min-height: 52px;
+  padding: 8px 12px;
+  border: 1px solid #cfd9e8;
+  border-radius: 12px;
+  background: #fbfdff;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.content-card input[type="file"]::file-selector-button,
+.vendor-info-file::file-selector-button,
+.is-artifact::file-selector-button {
+  height: 36px;
+  margin-right: 14px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 8px;
+  background: #2f66e8;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.content-card input[type="file"]::file-selector-button:hover,
+.vendor-info-file::file-selector-button:hover,
+.is-artifact::file-selector-button:hover {
+  background: #2456c7;
+}
+
+/* Keep Supporting Document label clean */
+.field-group label {
+  line-height: 1.25;
+}
+
+/* Optional text under file upload */
+.field-group small,
+.field-group .muted {
+  display: block;
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+}
