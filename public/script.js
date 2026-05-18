@@ -147,8 +147,6 @@ const profileFirstName = document.getElementById("profileFirstName");
 const profileLastName = document.getElementById("profileLastName");
 const profileJobTitle = document.getElementById("profileJobTitle");
 const profileWorkEmail = document.getElementById("profileWorkEmail");
-const themeToggle = document.getElementById("themeToggle");
-const themeIcon = document.getElementById("themeIcon");
 
 function getRoleLabel(role = currentRole) {
   return roleLabels[role] || role || "User";
@@ -2094,28 +2092,6 @@ async function generateAdminExcel() {
   }
 }
 
-function applyTheme(theme) {
-  document.documentElement.dataset.theme = theme;
-  localStorage.setItem("validify_theme", theme);
-
-  if (themeIcon) {
-    themeIcon.className = theme === "dark"
-      ? "fa-solid fa-sun"
-      : "fa-solid fa-moon";
-  }
-}
-
-function initTheme() {
-  const savedTheme = localStorage.getItem("validify_theme") || "light";
-  applyTheme(savedTheme);
-}
-
-function toggleTheme() {
-  const currentTheme = document.documentElement.dataset.theme || "light";
-  const nextTheme = currentTheme === "dark" ? "light" : "dark";
-  applyTheme(nextTheme);
-}
-
 function setupEvents() {
   document.querySelectorAll("[data-page]").forEach((button) => {
     button.addEventListener("click", () => showPage(button.dataset.page));
@@ -2135,10 +2111,6 @@ function setupEvents() {
     refreshCurrentPage();
     showToast("Page refreshed.");
   });
-}
-
-if (themeToggle) {
-  themeToggle.addEventListener("click", toggleTheme);
 }
 
   if (accountToggle && accountMenu) {
@@ -2272,7 +2244,6 @@ if (profileForm) {
   if (cancelSignoffBtn) cancelSignoffBtn.addEventListener("click", () => showPage("dashboard"));
 }
 
-initTheme();
 setupAddVendorForm();
 setupEvents();
 checkLoggedInUser();
