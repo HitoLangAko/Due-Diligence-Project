@@ -3905,3 +3905,469 @@ input[type="file"]:not(.hidden):hover::file-selector-button,
   font-size: 13px;
   font-weight: 600;
 }
+
+/* =========================
+   DARK MODE
+========================= */
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+html[data-theme="dark"] body {
+  background: #0f172a !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .app-shell,
+html[data-theme="dark"] .main-content,
+html[data-theme="dark"] main {
+  background: #0f172a !important;
+  color: #e5e7eb !important;
+}
+
+/* Sidebar */
+html[data-theme="dark"] .sidebar {
+  background: #111827 !important;
+  border-right: 1px solid #263244 !important;
+}
+
+html[data-theme="dark"] .nav-link {
+  color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .nav-link:hover {
+  background: #1e293b !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] .nav-link.active {
+  background: #2f66e8 !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] .account-box,
+html[data-theme="dark"] .account-menu {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .account-menu-action,
+html[data-theme="dark"] .account-menu-action i {
+  background: transparent !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .account-menu-action:hover {
+  background: #334155 !important;
+}
+
+html[data-theme="dark"] .account-line {
+  border-color: #334155 !important;
+}
+
+/* Page titles */
+html[data-theme="dark"] #pageTitle,
+html[data-theme="dark"] h1,
+html[data-theme="dark"] h2,
+html[data-theme="dark"] h3,
+html[data-theme="dark"] h4,
+html[data-theme="dark"] label,
+html[data-theme="dark"] strong {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] #breadcrumb,
+html[data-theme="dark"] .muted,
+html[data-theme="dark"] small,
+html[data-theme="dark"] p {
+  color: #cbd5e1 !important;
+}
+
+/* Cards */
+html[data-theme="dark"] .content-card,
+html[data-theme="dark"] .vendor-assessment-card,
+html[data-theme="dark"] .existing-assessment-card,
+html[data-theme="dark"] .currently-assessing-card,
+html[data-theme="dark"] .infosec-form-card,
+html[data-theme="dark"] .assessment-review-card,
+html[data-theme="dark"] .review-panel,
+html[data-theme="dark"] .summary-card,
+html[data-theme="dark"] .signoff-wrapper,
+html[data-theme="dark"] .profile-settings-card,
+html[data-theme="dark"] .admin-ddf-section {
+  background: #111827 !important;
+  border-color: #334155 !important;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Vendor Being Assessed card */
+html[data-theme="dark"] #vendorAssessmentPage .currently-assessing-card {
+  background: linear-gradient(135deg, #111827 0%, #1e293b 100%) !important;
+  border-color: #334155 !important;
+  border-left-color: #3b82f6 !important;
+}
+
+html[data-theme="dark"] #vendorAssessmentPage .currently-assessing-card .muted::before {
+  color: #93c5fd !important;
+}
+
+/* Inputs */
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+html[data-theme="dark"] input:focus,
+html[data-theme="dark"] select:focus,
+html[data-theme="dark"] textarea:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18) !important;
+}
+
+/* Tables */
+html[data-theme="dark"] table {
+  background: #111827 !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] th {
+  background: #1e293b !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+
+html[data-theme="dark"] td {
+  background: #111827 !important;
+  color: #e5e7eb !important;
+  border-color: #334155 !important;
+}
+
+html[data-theme="dark"] tr:hover td {
+  background: #1e293b !important;
+}
+
+/* Admin DDF sections */
+html[data-theme="dark"] .admin-ddf-section-title {
+  background: #1e293b !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+
+html[data-theme="dark"] .admin-ddf-response,
+html[data-theme="dark"] .admin-ddf-question,
+html[data-theme="dark"] .admin-ddf-explanation {
+  color: #e5e7eb !important;
+}
+
+/* Empty cells */
+html[data-theme="dark"] .empty-cell {
+  background: #1e293b !important;
+  color: #cbd5e1 !important;
+}
+
+/* File inputs */
+html[data-theme="dark"] input[type="file"]:not(.hidden),
+html[data-theme="dark"] .vendor-info-file,
+html[data-theme="dark"] .is-artifact {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #e5e7eb !important;
+}
+
+/* Sign-off upload */
+html[data-theme="dark"] #signoffPage .signature-upload-btn {
+  background: #1e293b !important;
+  border-color: #475569 !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] #signoffPage .signature-upload-btn span,
+html[data-theme="dark"] #signoffPage #signatureFileName {
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] #signoffPage .signature-upload-btn:hover {
+  background: #263244 !important;
+  border-color: #3b82f6 !important;
+}
+
+/* Top buttons */
+html[data-theme="dark"] .icon-btn,
+html[data-theme="dark"] #themeToggle {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.3) !important;
+}
+
+/* Status pills */
+html[data-theme="dark"] .status-pill {
+  border-color: #475569 !important;
+}
+
+/* Profile/help */
+html[data-theme="dark"] .help-list div,
+html[data-theme="dark"] .admin-is-summary-card {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+/* Scrollbar */
+html[data-theme="dark"] ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+html[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+html[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 999px;
+}
+
+html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}/* =========================
+   DARK MODE
+========================= */
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+html[data-theme="dark"] body {
+  background: #0f172a !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .app-shell,
+html[data-theme="dark"] .main-content,
+html[data-theme="dark"] main {
+  background: #0f172a !important;
+  color: #e5e7eb !important;
+}
+
+/* Sidebar */
+html[data-theme="dark"] .sidebar {
+  background: #111827 !important;
+  border-right: 1px solid #263244 !important;
+}
+
+html[data-theme="dark"] .nav-link {
+  color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .nav-link:hover {
+  background: #1e293b !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] .nav-link.active {
+  background: #2f66e8 !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] .account-box,
+html[data-theme="dark"] .account-menu {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .account-menu-action,
+html[data-theme="dark"] .account-menu-action i {
+  background: transparent !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .account-menu-action:hover {
+  background: #334155 !important;
+}
+
+html[data-theme="dark"] .account-line {
+  border-color: #334155 !important;
+}
+
+/* Page titles */
+html[data-theme="dark"] #pageTitle,
+html[data-theme="dark"] h1,
+html[data-theme="dark"] h2,
+html[data-theme="dark"] h3,
+html[data-theme="dark"] h4,
+html[data-theme="dark"] label,
+html[data-theme="dark"] strong {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] #breadcrumb,
+html[data-theme="dark"] .muted,
+html[data-theme="dark"] small,
+html[data-theme="dark"] p {
+  color: #cbd5e1 !important;
+}
+
+/* Cards */
+html[data-theme="dark"] .content-card,
+html[data-theme="dark"] .vendor-assessment-card,
+html[data-theme="dark"] .existing-assessment-card,
+html[data-theme="dark"] .currently-assessing-card,
+html[data-theme="dark"] .infosec-form-card,
+html[data-theme="dark"] .assessment-review-card,
+html[data-theme="dark"] .review-panel,
+html[data-theme="dark"] .summary-card,
+html[data-theme="dark"] .signoff-wrapper,
+html[data-theme="dark"] .profile-settings-card,
+html[data-theme="dark"] .admin-ddf-section {
+  background: #111827 !important;
+  border-color: #334155 !important;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Vendor Being Assessed card */
+html[data-theme="dark"] #vendorAssessmentPage .currently-assessing-card {
+  background: linear-gradient(135deg, #111827 0%, #1e293b 100%) !important;
+  border-color: #334155 !important;
+  border-left-color: #3b82f6 !important;
+}
+
+html[data-theme="dark"] #vendorAssessmentPage .currently-assessing-card .muted::before {
+  color: #93c5fd !important;
+}
+
+/* Inputs */
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+html[data-theme="dark"] input:focus,
+html[data-theme="dark"] select:focus,
+html[data-theme="dark"] textarea:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18) !important;
+}
+
+/* Tables */
+html[data-theme="dark"] table {
+  background: #111827 !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] th {
+  background: #1e293b !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+
+html[data-theme="dark"] td {
+  background: #111827 !important;
+  color: #e5e7eb !important;
+  border-color: #334155 !important;
+}
+
+html[data-theme="dark"] tr:hover td {
+  background: #1e293b !important;
+}
+
+/* Admin DDF sections */
+html[data-theme="dark"] .admin-ddf-section-title {
+  background: #1e293b !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+
+html[data-theme="dark"] .admin-ddf-response,
+html[data-theme="dark"] .admin-ddf-question,
+html[data-theme="dark"] .admin-ddf-explanation {
+  color: #e5e7eb !important;
+}
+
+/* Empty cells */
+html[data-theme="dark"] .empty-cell {
+  background: #1e293b !important;
+  color: #cbd5e1 !important;
+}
+
+/* File inputs */
+html[data-theme="dark"] input[type="file"]:not(.hidden),
+html[data-theme="dark"] .vendor-info-file,
+html[data-theme="dark"] .is-artifact {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #e5e7eb !important;
+}
+
+/* Sign-off upload */
+html[data-theme="dark"] #signoffPage .signature-upload-btn {
+  background: #1e293b !important;
+  border-color: #475569 !important;
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] #signoffPage .signature-upload-btn span,
+html[data-theme="dark"] #signoffPage #signatureFileName {
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] #signoffPage .signature-upload-btn:hover {
+  background: #263244 !important;
+  border-color: #3b82f6 !important;
+}
+
+/* Top buttons */
+html[data-theme="dark"] .icon-btn,
+html[data-theme="dark"] #themeToggle {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.3) !important;
+}
+
+/* Status pills */
+html[data-theme="dark"] .status-pill {
+  border-color: #475569 !important;
+}
+
+/* Profile/help */
+html[data-theme="dark"] .help-list div,
+html[data-theme="dark"] .admin-is-summary-card {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+/* Scrollbar */
+html[data-theme="dark"] ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+html[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+html[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 999px;
+}
+
+html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
