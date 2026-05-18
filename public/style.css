@@ -3806,3 +3806,33 @@ body[data-role="compliance"] #vendorAssessmentPage .vendor-assessment-card {
   line-height: 1;
   text-shadow: 0 4px 7px rgba(15, 23, 42, 0.25);
 }
+
+/* Bigger Validify logo image */
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 42px;
+}
+
+.validify-logo-img {
+  width: 120px !important;
+  height: 120px !important;
+  object-fit: contain !important;
+  display: block;
+  transform: scale(1.8);
+  transform-origin: center;
+  margin-bottom: 18px;
+  filter: drop-shadow(0 8px 12px rgba(15, 23, 42, 0.22));
+}
+
+.brand h1 {
+  margin: 0;
+  color: #2563eb;
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  text-shadow: 0 4px 7px rgba(15, 23, 42, 0.25);
+}
