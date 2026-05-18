@@ -2832,4 +2832,10 @@ html body[data-role="employee"] #vendorAssessmentPage #submitDepartmentFormBtn {
   }
 }
 
+#assessmentReviewPage .review-grid {
+  grid-template-columns: 1fr !important;
+}
 
+#assessmentReviewPage .review-panel {
+  width: 100%;
+}
