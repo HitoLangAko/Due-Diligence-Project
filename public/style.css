@@ -3789,14 +3789,6 @@ body[data-role="compliance"] #vendorAssessmentPage .vendor-assessment-card {
   margin-bottom: 42px;
 }
 
-.validify-logo-img {
-  width: 86px;
-  height: 86px;
-  object-fit: contain;
-  display: block;
-  filter: drop-shadow(0 8px 12px rgba(15, 23, 42, 0.22));
-}
-
 .brand h1 {
   margin: 0;
   color: #2563eb;
@@ -3817,13 +3809,13 @@ body[data-role="compliance"] #vendorAssessmentPage .vendor-assessment-card {
 }
 
 .validify-logo-img {
-  width: 120px !important;
-  height: 120px !important;
+   width: 95px !important;
+  height: 95px !important;
   object-fit: contain !important;
   display: block;
-  transform: scale(1.8);
+  transform: scale(1.35);
   transform-origin: center;
-  margin-bottom: 18px;
+  margin-bottom: 10px;
   filter: drop-shadow(0 8px 12px rgba(15, 23, 42, 0.22));
 }
 
