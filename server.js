@@ -1466,8 +1466,8 @@ function createSupplierDDFSheet(workbook, assessment, answers) {
   {
     state: "frozen",
     xSplit: 1,
-    ySplit: 9,
-    topLeftCell: "B10"
+    ySplit: 0,
+    topLeftCell: "B1"
   }
 ];
 
@@ -1624,8 +1624,8 @@ function createInformationSecuritySheet(workbook, assessment, answers) {
   {
     state: "frozen",
     xSplit: 1,
-    ySplit: 9,
-    topLeftCell: "B10"
+    ySplit: 0,
+    topLeftCell: "B1"
   }
 ];
 
