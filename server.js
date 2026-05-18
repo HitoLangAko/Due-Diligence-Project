@@ -1318,81 +1318,56 @@ app.get("/admin/department-assessments", requireRole("admin"), async (_req, res)
 
 /* ADMIN EXCEL EXPORT */
 
-function styleHeaderRow(row) {
-  row.eachCell((cell) => {
-    cell.font = {
-      bold: true,
-      color: { argb: "FFFFFFFF" }
-    };
+function thinBorder() {
+  return {
+    top: { style: "thin", color: { argb: "FF000000" } },
+    left: { style: "thin", color: { argb: "FF000000" } },
+    bottom: { style: "thin", color: { argb: "FF000000" } },
+    right: { style: "thin", color: { argb: "FF000000" } }
+  };
+}
 
+function mediumBorder() {
+  return {
+    top: { style: "medium", color: { argb: "FF000000" } },
+    left: { style: "medium", color: { argb: "FF000000" } },
+    bottom: { style: "medium", color: { argb: "FF000000" } },
+    right: { style: "medium", color: { argb: "FF000000" } }
+  };
+}
+
+function setCellStyle(cell, options = {}) {
+  cell.font = options.font || { size: 9, color: { argb: "FF000000" } };
+  cell.alignment = options.alignment || {
+    vertical: "top",
+    horizontal: "left",
+    wrapText: true
+  };
+  cell.border = options.border || thinBorder();
+
+  if (options.fill) {
     cell.fill = {
       type: "pattern",
       pattern: "solid",
-      fgColor: { argb: "FF1E3353" }
+      fgColor: { argb: options.fill }
     };
-
-    cell.alignment = {
-      vertical: "middle",
-      horizontal: "center",
-      wrapText: true
-    };
-
-    cell.border = {
-      top: { style: "thin" },
-      left: { style: "thin" },
-      bottom: { style: "thin" },
-      right: { style: "thin" }
-    };
-  });
+  }
 }
 
-function styleSectionRow(row) {
-  row.eachCell((cell) => {
-    cell.font = {
-      bold: true,
-      color: { argb: "FF000000" }
-    };
+function styleRange(sheet, range, options = {}) {
+  const [start, end] = range.split(":");
+  const startCell = sheet.getCell(start);
+  const endCell = sheet.getCell(end);
 
-    cell.fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "FFD9D9D9" }
-    };
-
-    cell.alignment = {
-      vertical: "middle",
-      horizontal: "left",
-      wrapText: true
-    };
-
-    cell.border = {
-      top: { style: "thin" },
-      left: { style: "thin" },
-      bottom: { style: "thin" },
-      right: { style: "thin" }
-    };
-  });
+  for (let row = startCell.row; row <= endCell.row; row++) {
+    for (let col = startCell.col; col <= endCell.col; col++) {
+      setCellStyle(sheet.getCell(row, col), options);
+    }
+  }
 }
 
-function styleNormalRow(row) {
-  row.eachCell((cell) => {
-    cell.alignment = {
-      vertical: "top",
-      horizontal: "left",
-      wrapText: true
-    };
-
-    cell.border = {
-      top: { style: "thin" },
-      left: { style: "thin" },
-      bottom: { style: "thin" },
-      right: { style: "thin" }
-    };
-  });
-}
-
-function formatDateExcel(value) {
-  if (!value) return "N/A";
+function formatExcelDate(value) {
+  if (!value) return "";
 
   const date = new Date(value);
 
@@ -1407,344 +1382,513 @@ function formatDateExcel(value) {
   });
 }
 
-function createDueDiligenceSheet(workbook, assessments) {
-  const sheet = workbook.addWorksheet("Due Diligence Form");
+function answerComment(item) {
+  const parts = [];
 
-  sheet.columns = [
-    { header: "Assessment ID", key: "assessment_code", width: 18 },
-    { header: "Company Name", key: "company_name", width: 30 },
-    { header: "Product / Services", key: "product_services_offered", width: 42 },
-    { header: "Purpose", key: "purpose", width: 24 },
-    { header: "Assessment Date", key: "assessment_date", width: 18 },
-    { header: "Status", key: "overall_status", width: 24 },
-    { header: "Created By", key: "created_by", width: 26 }
-  ];
+  if (item.explanation) {
+    parts.push(item.explanation);
+  }
 
-  sheet.mergeCells("A1:G1");
-  sheet.getCell("A1").value = "DUE DILIGENCE FORM";
-  sheet.getCell("A1").font = {
-    bold: true,
-    size: 18,
-    color: { argb: "FFFFFFFF" }
-  };
-  sheet.getCell("A1").fill = {
-    type: "pattern",
-    pattern: "solid",
-    fgColor: { argb: "FF1E3353" }
-  };
-  sheet.getCell("A1").alignment = {
-    horizontal: "center",
-    vertical: "middle"
-  };
+  if (item.artifact_name) {
+    parts.push(`Artifact: ${item.artifact_name}`);
+  }
 
-  sheet.addRow([]);
-
-  const header = sheet.addRow([
-    "Assessment ID",
-    "Company Name",
-    "Product / Services",
-    "Purpose",
-    "Assessment Date",
-    "Status",
-    "Created By"
-  ]);
-
-  styleHeaderRow(header);
-
-  assessments.forEach((item) => {
-    const row = sheet.addRow([
-      item.assessment_code || `VA-${item.assessment_id}`,
-      item.company_name || "N/A",
-      item.product_services_offered || "N/A",
-      item.purpose || "N/A",
-      formatDateExcel(item.assessment_date),
-      item.overall_status || "N/A",
-      item.created_by || "N/A"
-    ]);
-
-    styleNormalRow(row);
-  });
-
-  sheet.views = [{ state: "frozen", ySplit: 3 }];
+  return parts.join("\n");
 }
 
-function createDepartmentAnswersSheet(workbook, answers) {
-  const sheet = workbook.addWorksheet("Information Security");
+function normalizeSectionName(value) {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function createSupplierDDFSheet(workbook, assessment, answers) {
+  const sheet = workbook.addWorksheet("Supplier DDF");
+
+  sheet.pageSetup = {
+    paperSize: 9,
+    orientation: "portrait",
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0
+  };
+
+  sheet.properties.defaultRowHeight = 22;
+  sheet.views = [{ state: "frozen", ySplit: 10 }];
 
   sheet.columns = [
-    { header: "Assessment ID", key: "assessment_code", width: 18 },
-    { header: "Vendor", key: "company_name", width: 30 },
-    { header: "Department", key: "department_role", width: 18 },
-    { header: "Section", key: "section_name", width: 28 },
-    { header: "Question", key: "question_text", width: 70 },
-    { header: "Response", key: "response", width: 16 },
-    { header: "Company Comment / Explanation", key: "explanation", width: 38 },
-    { header: "Artifacts", key: "artifact_name", width: 30 }
+    { width: 68 },
+    { width: 32 },
+    { width: 32 }
   ];
 
-  sheet.mergeCells("A1:H1");
-  sheet.getCell("A1").value = "VENDOR / IT SUPPLIER DUE DILIGENCE QUESTIONNAIRES";
-  sheet.getCell("A1").font = {
-    bold: true,
-    size: 16,
-    color: { argb: "FFFFFFFF" }
-  };
-  sheet.getCell("A1").fill = {
-    type: "pattern",
-    pattern: "solid",
-    fgColor: { argb: "FF1E3353" }
-  };
-  sheet.getCell("A1").alignment = {
-    horizontal: "center",
-    vertical: "middle",
-    wrapText: true
-  };
+  const titleFill = "FF1F4E79";
+  const vendorFill = "FFC65911";
+  const companyFill = "FF1F4E79";
+  const sectionFill = "FFD9D9D9";
 
-  sheet.addRow([]);
+  sheet.mergeCells("A1:C1");
+  sheet.getCell("A1").value = `${assessment.company_name || "<Company>"} - DUE DILIGENCE FORM`;
+  setCellStyle(sheet.getCell("A1"), {
+    font: { bold: true, size: 11, color: { argb: "FFFFFFFF" } },
+    alignment: { horizontal: "center", vertical: "middle", wrapText: true },
+    border: mediumBorder(),
+    fill: titleFill
+  });
+  sheet.getRow(1).height = 24;
 
-  const header = sheet.addRow([
-    "Assessment ID",
-    "Vendor",
-    "Department",
-    "Section",
-    "Question",
-    "Response",
-    "Company Comment / Explanation",
-    "Artifacts"
-  ]);
+  const infoRows = [
+    ["Company Name:", assessment.company_name || ""],
+    ["Company Website:", assessment.company_website || ""],
+    ["Product/ Services Offered to <company>:", assessment.product_services_offered || ""],
+    ["Purpose: For Accreditation/Re-accreditation, New contract or Renewal:", assessment.purpose || ""],
+    ["Contact Person Name / Email Address / Phone Number", `${assessment.contact_person_name || ""} ${assessment.contact_email || ""} ${assessment.contact_phone || ""}`.trim()],
+    ["Date of Assessment:", formatExcelDate(assessment.assessment_date)]
+  ];
 
-  styleHeaderRow(header);
+  let row = 2;
 
-  let lastSectionKey = "";
+  infoRows.forEach(([label, value]) => {
+    sheet.getCell(`A${row}`).value = label;
+    sheet.getCell(`B${row}`).value = value;
+    sheet.mergeCells(`B${row}:C${row}`);
 
-  answers.forEach((item) => {
-    const currentSectionKey = `${item.assessment_code}-${item.department_role}-${item.section_name}`;
+    setCellStyle(sheet.getCell(`A${row}`), {
+      font: { bold: true, size: 9 },
+      alignment: { vertical: "middle", horizontal: "left", wrapText: true },
+      border: thinBorder()
+    });
 
-    if (currentSectionKey !== lastSectionKey) {
-      const sectionRow = sheet.addRow([
-        `${item.assessment_code || `VA-${item.assessment_id}`} - ${String(item.department_role || "").toUpperCase()} - ${item.section_name || "Section"}`,
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        ""
-      ]);
+    styleRange(sheet, `B${row}:C${row}`, {
+      font: { size: 9 },
+      alignment: { vertical: "middle", horizontal: "left", wrapText: true },
+      border: thinBorder()
+    });
 
-      sheet.mergeCells(`A${sectionRow.number}:H${sectionRow.number}`);
-      styleSectionRow(sectionRow);
-      lastSectionKey = currentSectionKey;
-    }
-
-    const row = sheet.addRow([
-      item.assessment_code || `VA-${item.assessment_id}`,
-      item.company_name || "N/A",
-      item.department_role || "N/A",
-      item.section_name || "N/A",
-      item.question_text || "N/A",
-      item.response || "N/A",
-      item.explanation || "",
-      item.artifact_name || ""
-    ]);
-
-    styleNormalRow(row);
+    row++;
   });
 
-  sheet.views = [{ state: "frozen", ySplit: 3 }];
+  row++;
+
+  sheet.getCell(`A${row}`).value = "";
+  sheet.getCell(`B${row}`).value = "VENDOR RESPONSE";
+  sheet.getCell(`C${row}`).value = "<Company> COMMENT/S";
+
+  setCellStyle(sheet.getCell(`A${row}`), {
+    font: { bold: true, size: 9 },
+    border: mediumBorder()
+  });
+
+  setCellStyle(sheet.getCell(`B${row}`), {
+    font: { bold: true, size: 9, color: { argb: "FFFFFFFF" } },
+    alignment: { horizontal: "center", vertical: "middle", wrapText: true },
+    border: mediumBorder(),
+    fill: vendorFill
+  });
+
+  setCellStyle(sheet.getCell(`C${row}`), {
+    font: { bold: true, size: 9, color: { argb: "FFFFFFFF" } },
+    alignment: { horizontal: "center", vertical: "middle", wrapText: true },
+    border: mediumBorder(),
+    fill: companyFill
+  });
+
+  row++;
+
+  const sectionOrder = [
+    "Consumer",
+    "IT Risk Management",
+    "Compliance",
+    "Resiliency",
+    "Data Privacy",
+    "Environmental and Social Risk Management"
+  ];
+
+  sectionOrder.forEach((sectionName) => {
+    const sectionRows = answers.filter((item) => normalizeSectionName(item.section_name) === normalizeSectionName(sectionName));
+
+    if (!sectionRows.length) return;
+
+    sheet.getCell(`A${row}`).value = sectionName.toUpperCase();
+    sheet.getCell(`B${row}`).value = "";
+    sheet.getCell(`C${row}`).value = "";
+
+    styleRange(sheet, `A${row}:C${row}`, {
+      font: { bold: true, size: 9 },
+      alignment: { vertical: "middle", horizontal: "left", wrapText: true },
+      border: mediumBorder(),
+      fill: sectionFill
+    });
+
+    row++;
+
+    sectionRows.forEach((item) => {
+      sheet.getCell(`A${row}`).value = item.question_text || "";
+      sheet.getCell(`B${row}`).value = item.response || "";
+      sheet.getCell(`C${row}`).value = answerComment(item);
+      sheet.getRow(row).height = 44;
+
+      setCellStyle(sheet.getCell(`A${row}`), {
+        font: { italic: true, size: 9 },
+        alignment: { vertical: "top", horizontal: "left", wrapText: true },
+        border: thinBorder()
+      });
+
+      setCellStyle(sheet.getCell(`B${row}`), {
+        font: { size: 9 },
+        alignment: { vertical: "top", horizontal: "left", wrapText: true },
+        border: thinBorder()
+      });
+
+      setCellStyle(sheet.getCell(`C${row}`), {
+        font: { size: 9 },
+        alignment: { vertical: "top", horizontal: "left", wrapText: true },
+        border: thinBorder()
+      });
+
+      row++;
+    });
+  });
+}
+
+function createInformationSecuritySheet(workbook, assessment, answers) {
+  const sheet = workbook.addWorksheet("Information Security");
+
+  sheet.pageSetup = {
+    paperSize: 9,
+    orientation: "portrait",
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0
+  };
+
+  sheet.properties.defaultRowHeight = 22;
+  sheet.views = [{ state: "frozen", ySplit: 2 }];
+
+  sheet.columns = [
+    { width: 72 },
+    { width: 30 },
+    { width: 30 },
+    { width: 24 }
+  ];
+
+  const infoSecRows = answers.filter((item) => {
+    return normalizeSectionName(item.department_role) === "infosec" ||
+      normalizeSectionName(item.section_name) === "information security";
+  });
+
+  sheet.mergeCells("A1:D1");
+  sheet.getCell("A1").value = `Product/ Services Offered to <Company>: ${assessment.product_services_offered || ""}`;
+  setCellStyle(sheet.getCell("A1"), {
+    font: { bold: true, size: 9 },
+    alignment: { horizontal: "left", vertical: "middle", wrapText: true },
+    border: mediumBorder()
+  });
+
+  sheet.getCell("A2").value = "IT SUPPLIER DUE DILIGENCE QUESTIONNAIRES";
+  sheet.getCell("B2").value = "RESPONSE/CURRENTLY\nAVAILABLE IN YOUR COMPANY?\n(YES | NO | N/A)";
+  sheet.getCell("C2").value = "VENDOR/SUPPLIER\nCOMMENTS";
+  sheet.getCell("D2").value = "ARTIFACTS";
+
+  ["A2", "B2", "C2", "D2"].forEach((cellAddress) => {
+    setCellStyle(sheet.getCell(cellAddress), {
+      font: { bold: true, size: 9, color: { argb: "FFFFFFFF" } },
+      alignment: { horizontal: "center", vertical: "middle", wrapText: true },
+      border: mediumBorder(),
+      fill: "FF1F4E79"
+    });
+  });
+
+  sheet.getRow(2).height = 45;
+
+  let row = 3;
+  let lastSection = "";
+
+  if (!infoSecRows.length) {
+    sheet.mergeCells(`A${row}:D${row}`);
+    sheet.getCell(`A${row}`).value = "No Information Security answers found for this assessment.";
+    setCellStyle(sheet.getCell(`A${row}`), {
+      font: { italic: true, size: 9 },
+      alignment: { horizontal: "center", vertical: "middle", wrapText: true },
+      border: thinBorder()
+    });
+    return;
+  }
+
+  infoSecRows.forEach((item) => {
+    const sectionName = item.section_name || "Information Security";
+
+    if (sectionName !== lastSection) {
+      sheet.mergeCells(`A${row}:D${row}`);
+      sheet.getCell(`A${row}`).value = sectionName;
+      setCellStyle(sheet.getCell(`A${row}`), {
+        font: { bold: true, size: 9, color: { argb: "FFFFFFFF" } },
+        alignment: { horizontal: "center", vertical: "middle", wrapText: true },
+        border: mediumBorder(),
+        fill: "FF1F4E79"
+      });
+
+      row++;
+      lastSection = sectionName;
+    }
+
+    sheet.getCell(`A${row}`).value = item.question_text || "";
+    sheet.getCell(`B${row}`).value = item.response || "";
+    sheet.getCell(`C${row}`).value = item.explanation || "";
+    sheet.getCell(`D${row}`).value = item.artifact_name || "";
+    sheet.getRow(row).height = 44;
+
+    ["A", "B", "C", "D"].forEach((col) => {
+      setCellStyle(sheet.getCell(`${col}${row}`), {
+        font: { size: 9 },
+        alignment: { vertical: "top", horizontal: "left", wrapText: true },
+        border: thinBorder()
+      });
+    });
+
+    row++;
+  });
 }
 
 function createSignoffSheet(workbook, signoffs) {
   const sheet = workbook.addWorksheet("Sign-off Sheet");
 
+  sheet.pageSetup = {
+    paperSize: 9,
+    orientation: "landscape",
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 1
+  };
+
+  sheet.properties.defaultRowHeight = 20;
   sheet.columns = [
-    { width: 8 },
-    { width: 8 },
-    { width: 22 },
-    { width: 26 },
-    { width: 8 },
-    { width: 8 },
-    { width: 22 },
-    { width: 26 }
+    { width: 4 },
+    { width: 10 },
+    { width: 12 },
+    { width: 12 },
+    { width: 12 },
+    { width: 12 },
+    { width: 12 },
+    { width: 12 },
+    { width: 12 },
+    { width: 12 },
+    { width: 12 },
+    { width: 12 },
+    { width: 12 },
+    { width: 4 }
   ];
 
-  sheet.mergeCells("C2:H4");
-  sheet.getCell("C2").value = "VENDOR / IT SUPPLIER DUE DILIGENCE FORM\nSIGN-OFF SHEET";
-  sheet.getCell("C2").font = {
-    bold: true,
-    size: 18
-  };
-  sheet.getCell("C2").alignment = {
-    vertical: "middle",
-    horizontal: "center",
-    wrapText: true
-  };
+  for (let r = 1; r <= 33; r++) {
+    for (let c = 2; c <= 13; c++) {
+      setCellStyle(sheet.getCell(r, c), {
+        font: { size: 9 },
+        alignment: { horizontal: "center", vertical: "middle", wrapText: true },
+        border: thinBorder()
+      });
+    }
+  }
+
+  sheet.mergeCells("C2:E4");
+  sheet.getCell("C2").value = "";
+  styleRange(sheet, "C2:E4", {
+    font: { size: 9 },
+    alignment: { horizontal: "center", vertical: "middle", wrapText: true },
+    border: mediumBorder()
+  });
+
+  sheet.mergeCells("F2:L4");
+  sheet.getCell("F2").value = "VENDOR/IT SUPPLIER DUE DILIGENCE FORM\nSIGN-OFF SHEET";
+  setCellStyle(sheet.getCell("F2"), {
+    font: { bold: true, size: 18 },
+    alignment: { horizontal: "left", vertical: "middle", wrapText: true },
+    border: thinBorder()
+  });
 
   const signoffMap = {};
 
   signoffs.forEach((item) => {
-    signoffMap[String(item.role_name || "").toLowerCase()] = item;
+    signoffMap[normalizeSectionName(item.role_name)] = item;
   });
 
   function getSigner(role) {
-    return signoffMap[String(role).toLowerCase()]?.signer_name || "";
+    return signoffMap[normalizeSectionName(role)]?.signer_name || "";
   }
 
-  function box(roleCell, nameCell, roleLabel, signerName) {
-    sheet.getCell(roleCell).value = roleLabel;
-    sheet.getCell(nameCell).value = signerName;
+  function signatureBlock(roleRange, nameRange, roleLabel, signerName) {
+    sheet.mergeCells(roleRange);
+    sheet.mergeCells(nameRange);
 
-    [roleCell, nameCell].forEach((cellAddress) => {
-      const cell = sheet.getCell(cellAddress);
+    const roleCell = sheet.getCell(roleRange.split(":")[0]);
+    const nameCell = sheet.getCell(nameRange.split(":")[0]);
 
-      cell.alignment = {
-        horizontal: "center",
-        vertical: "middle",
-        wrapText: true
-      };
+    roleCell.value = roleLabel;
+    nameCell.value = signerName;
 
-      cell.font = {
-        bold: true
-      };
+    styleRange(sheet, roleRange, {
+      font: { bold: true, size: 9 },
+      alignment: { horizontal: "center", vertical: "middle", wrapText: true },
+      border: mediumBorder(),
+      fill: "FFDDEBF7"
+    });
 
-      cell.fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FFD9D9D9" }
-      };
-
-      cell.border = {
-        top: { style: "thin" },
-        left: { style: "thin" },
-        bottom: { style: "thin" },
-        right: { style: "thin" }
-      };
+    styleRange(sheet, nameRange, {
+      font: { bold: true, size: 10 },
+      alignment: { horizontal: "center", vertical: "middle", wrapText: true },
+      border: mediumBorder()
     });
   }
 
-  sheet.mergeCells("C6:C10");
-  sheet.mergeCells("D6:E10");
-  box("C6", "D6", "IT", getSigner("IT"));
+  signatureBlock("C6:C10", "D6:F10", "IT", getSigner("IT"));
+  signatureBlock("H6:H10", "I6:K10", "COMPLIANCE", getSigner("Compliance"));
+  signatureBlock("C12:C16", "D12:F16", "INFOSEC", getSigner("InfoSec"));
+  signatureBlock("H12:H16", "I12:K16", "DPO", getSigner("DPO"));
+  signatureBlock("C19:C23", "D19:F23", "RISK\nMANAGEMENT\nOFFICER", getSigner("Management"));
+  signatureBlock("H19:H23", "I19:K23", "HR", getSigner("HR"));
 
-  sheet.mergeCells("G6:G10");
-  sheet.mergeCells("H6:H10");
-  box("G6", "H6", "COMPLIANCE", getSigner("Compliance"));
-
-  sheet.mergeCells("C12:C16");
-  sheet.mergeCells("D12:E16");
-  box("C12", "D12", "INFOSEC", getSigner("InfoSec"));
-
-  sheet.mergeCells("G12:G16");
-  sheet.mergeCells("H12:H16");
-  box("G12", "H12", "DPO", getSigner("DPO"));
-
-  sheet.mergeCells("C18:C22");
-  sheet.mergeCells("D18:E22");
-  box("C18", "D18", "MANAGEMENT", getSigner("Management"));
-
-  sheet.mergeCells("G18:G22");
-  sheet.mergeCells("H18:H22");
-  box("G18", "H18", "HR", getSigner("HR"));
-
-  sheet.mergeCells("C25:H26");
+  sheet.mergeCells("C25:L26");
   sheet.getCell("C25").value =
     "DISCLAIMER: All identified risks, findings and recommended controls are based on the disclosure of Vendor/IT supplier with the supervision of the requesting unit based on the initial questionnaire submitted.";
 
-  sheet.mergeCells("C28:H28");
+  sheet.mergeCells("C28:L28");
   sheet.getCell("C28").value =
-    "All identified Vendor/IT supplier risks and any open items are reflected in the Business unit's RCSAs and SLA Documentation.";
+    "All identified Vendor/IT supplier risks, any open items are reflected in the Business unit's RCSAs and SLA Documentation.";
 
-  sheet.mergeCells("C30:H31");
+  sheet.mergeCells("C30:L31");
   sheet.getCell("C30").value =
     "This signed document is a requirement for accreditation and onboarding of Vendor/IT supplier whose service engagement connects to the Company's network infrastructure/core systems and/or with exchange of data.";
 
   ["C25", "C28", "C30"].forEach((cellAddress) => {
-    const cell = sheet.getCell(cellAddress);
+    setCellStyle(sheet.getCell(cellAddress), {
+      font: { italic: true, size: 8 },
+      alignment: { horizontal: "center", vertical: "middle", wrapText: true },
+      border: thinBorder()
+    });
+  });
 
-    cell.alignment = {
-      horizontal: "center",
-      vertical: "middle",
-      wrapText: true
-    };
-
-    cell.font = {
-      size: 9,
-      italic: true
-    };
+  sheet.mergeCells("C33:L33");
+  sheet.getCell("C33").value = "Signature above printed name of Business Unit Representative";
+  setCellStyle(sheet.getCell("C33"), {
+    font: { size: 9 },
+    alignment: { horizontal: "center", vertical: "middle", wrapText: true },
+    border: thinBorder(),
+    fill: "FFD9D9D9"
   });
 }
 
-app.get("/admin/export-excel", requireRole("admin"), async (_req, res) => {
+app.get("/admin/export-excel", requireRole("admin"), async (req, res) => {
   try {
-    const assessments = await runQuery(`
-      SELECT
-        va.assessment_id,
-        va.assessment_code,
-        va.vendor_id,
-        va.purpose,
-        va.assessment_date,
-        va.overall_status,
-        va.created_at,
-        v.company_name,
-        v.product_services_offered,
-        u.full_name AS created_by
-      FROM vendor_assessments va
-      JOIN vendors v ON va.vendor_id = v.vendor_id
-      LEFT JOIN users u ON va.created_by_user_id = u.user_id
-      ORDER BY va.created_at DESC
-    `);
+    const requestedAssessmentId = req.query.assessment_id ? Number(req.query.assessment_id) : null;
+    const assessmentParams = [];
+    let assessmentWhere = "";
+    let assessmentLimit = "LIMIT 1";
 
-    const answers = await runQuery(`
-      SELECT
-        da.department_assessment_id,
-        da.assessment_id,
-        da.department_role,
-        da.status AS department_status,
-        va.assessment_code,
-        va.vendor_id,
-        v.company_name,
-        ans.section_name,
-        ans.question_index,
-        ans.question_text,
-        ans.response,
-        ans.explanation,
-        ans.artifact_name,
-        ans.artifact_path
-      FROM department_answers ans
-      JOIN department_assessments da
-        ON ans.department_assessment_id = da.department_assessment_id
-      JOIN vendor_assessments va
-        ON da.assessment_id = va.assessment_id
-      JOIN vendors v
-        ON va.vendor_id = v.vendor_id
-      ORDER BY
-        va.assessment_id DESC,
-        FIELD(da.department_role, 'it', 'infosec', 'management', 'dpo', 'hr', 'compliance'),
-        ans.question_index ASC
-    `);
+    if (requestedAssessmentId && Number.isInteger(requestedAssessmentId)) {
+      assessmentWhere = "WHERE va.assessment_id = ?";
+      assessmentParams.push(requestedAssessmentId);
+      assessmentLimit = "";
+    }
 
-    const signoffs = await runQuery(`
-      SELECT
-        s.signoff_id,
-        s.assessment_id,
-        s.department_assessment_id,
-        s.role_name,
-        s.signer_name,
-        s.signoff_status,
-        s.signed_at,
-        u.full_name AS created_by
-      FROM sign_offs s
-      LEFT JOIN users u ON s.created_by_user_id = u.user_id
-      ORDER BY s.created_at DESC
-    `);
+    const assessments = await runQuery(
+      `
+        SELECT
+          va.assessment_id,
+          va.assessment_code,
+          va.vendor_id,
+          va.purpose,
+          va.assessment_date,
+          va.overall_status,
+          va.created_at,
+          v.company_name,
+          v.company_website,
+          v.product_services_offered,
+          v.contact_person_name,
+          v.contact_email,
+          v.contact_phone,
+          u.full_name AS created_by
+        FROM vendor_assessments va
+        JOIN vendors v ON va.vendor_id = v.vendor_id
+        LEFT JOIN users u ON va.created_by_user_id = u.user_id
+        ${assessmentWhere}
+        ORDER BY va.created_at DESC
+        ${assessmentLimit}
+      `,
+      assessmentParams
+    );
+
+    const selectedAssessment = assessments[0] || {};
+    const selectedAssessmentId = selectedAssessment.assessment_id || requestedAssessmentId || null;
+
+    let answers = [];
+    let signoffs = [];
+
+    if (selectedAssessmentId) {
+      answers = await runQuery(
+        `
+          SELECT
+            da.department_assessment_id,
+            da.assessment_id,
+            da.department_role,
+            da.status AS department_status,
+            va.assessment_code,
+            va.vendor_id,
+            v.company_name,
+            ans.section_name,
+            ans.question_index,
+            ans.question_text,
+            ans.response,
+            ans.explanation,
+            ans.artifact_name,
+            ans.artifact_path
+          FROM department_answers ans
+          JOIN department_assessments da
+            ON ans.department_assessment_id = da.department_assessment_id
+          JOIN vendor_assessments va
+            ON da.assessment_id = va.assessment_id
+          JOIN vendors v
+            ON va.vendor_id = v.vendor_id
+          WHERE va.assessment_id = ?
+          ORDER BY
+            FIELD(da.department_role, 'management', 'it', 'compliance', 'dpo', 'hr', 'infosec'),
+            ans.question_index ASC
+        `,
+        [selectedAssessmentId]
+      );
+
+      signoffs = await runQuery(
+        `
+          SELECT
+            s.signoff_id,
+            s.assessment_id,
+            s.department_assessment_id,
+            s.role_name,
+            s.signer_name,
+            s.signoff_status,
+            s.signed_at,
+            u.full_name AS created_by
+          FROM sign_offs s
+          LEFT JOIN department_assessments da
+            ON s.department_assessment_id = da.department_assessment_id
+          LEFT JOIN users u
+            ON s.created_by_user_id = u.user_id
+          WHERE s.assessment_id = ?
+          OR da.assessment_id = ?
+          ORDER BY s.created_at DESC
+        `,
+        [selectedAssessmentId, selectedAssessmentId]
+      );
+    }
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = "Validify";
     workbook.created = new Date();
 
-    createDueDiligenceSheet(workbook, assessments);
-    createDepartmentAnswersSheet(workbook, answers);
+    createSupplierDDFSheet(workbook, selectedAssessment, answers);
+    createInformationSecuritySheet(workbook, selectedAssessment, answers);
     createSignoffSheet(workbook, signoffs);
+
+    const safeCode = selectedAssessment.assessment_code || "Due_Diligence_Report";
 
     res.setHeader(
       "Content-Type",
@@ -1753,7 +1897,7 @@ app.get("/admin/export-excel", requireRole("admin"), async (_req, res) => {
 
     res.setHeader(
       "Content-Disposition",
-      "attachment; filename=Validify_Due_Diligence_Report.xlsx"
+      `attachment; filename=Validify_${safeCode}_Due_Diligence_Report.xlsx`
     );
 
     await workbook.xlsx.write(res);
@@ -1765,6 +1909,7 @@ app.get("/admin/export-excel", requireRole("admin"), async (_req, res) => {
     });
   }
 });
+
 
 const PORT = process.env.PORT || 3000;
 
