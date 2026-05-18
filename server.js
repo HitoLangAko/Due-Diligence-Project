@@ -345,9 +345,16 @@ async function initDatabase() {
     )
   `);
 
+  
   await addColumnIfMissing("users", "email_verified", "TINYINT(1) DEFAULT 1");
   await addColumnIfMissing("users", "verification_token_hash", "VARCHAR(255) NULL");
   await addColumnIfMissing("users", "verification_token_expires", "DATETIME NULL");
+
+  await addColumnIfMissing("users", "first_name", "VARCHAR(100) NULL");
+  await addColumnIfMissing("users", "last_name", "VARCHAR(100) NULL");
+  await addColumnIfMissing("users", "job_title", "VARCHAR(150) NULL");
+  await addColumnIfMissing("users", "work_email", "VARCHAR(150) NULL");
+  await addColumnIfMissing("users", "profile_photo_path", "VARCHAR(255) NULL");
 
   try {
     await runQuery(`
@@ -660,12 +667,136 @@ app.post("/login", async (req, res) => {
   }
 });
 
-app.get("/me", (req, res) => {
+app.get("/me", async (req, res) => {
   if (!req.session.user) {
     return res.status(401).json({ message: "Not logged in." });
   }
 
-  res.json(req.session.user);
+  try {
+    const rows = await runQuery(
+      `
+        SELECT
+          user_id,
+          full_name,
+          email,
+          role,
+          first_name,
+          last_name,
+          job_title,
+          work_email,
+          profile_photo_path
+        FROM users
+        WHERE user_id = ?
+        LIMIT 1
+      `,
+      [req.session.user.user_id]
+    );
+
+    if (!rows.length) {
+      return res.status(401).json({ message: "User not found." });
+    }
+
+    req.session.user = {
+      ...req.session.user,
+      ...rows[0]
+    };
+
+    res.json(req.session.user);
+  } catch (error) {
+    console.error("Fetch current user error:", error);
+    res.status(500).json({ message: "Failed to load user profile." });
+  }
+});
+
+app.post("/profile", upload.single("profile_photo"), async (req, res) => {
+  if (!req.session.user) {
+    return res.status(401).json({ message: "Not logged in." });
+  }
+
+  const {
+    first_name,
+    last_name,
+    job_title,
+    work_email
+  } = req.body;
+
+  const profilePhotoPath = req.file ? `/uploads/${req.file.filename}` : null;
+
+  try {
+    if (profilePhotoPath) {
+      await runQuery(
+        `
+          UPDATE users
+          SET
+            first_name = ?,
+            last_name = ?,
+            job_title = ?,
+            work_email = ?,
+            profile_photo_path = ?
+          WHERE user_id = ?
+        `,
+        [
+          first_name || null,
+          last_name || null,
+          job_title || null,
+          work_email || null,
+          profilePhotoPath,
+          req.session.user.user_id
+        ]
+      );
+    } else {
+      await runQuery(
+        `
+          UPDATE users
+          SET
+            first_name = ?,
+            last_name = ?,
+            job_title = ?,
+            work_email = ?
+          WHERE user_id = ?
+        `,
+        [
+          first_name || null,
+          last_name || null,
+          job_title || null,
+          work_email || null,
+          req.session.user.user_id
+        ]
+      );
+    }
+
+    const rows = await runQuery(
+      `
+        SELECT
+          user_id,
+          full_name,
+          email,
+          role,
+          first_name,
+          last_name,
+          job_title,
+          work_email,
+          profile_photo_path
+        FROM users
+        WHERE user_id = ?
+        LIMIT 1
+      `,
+      [req.session.user.user_id]
+    );
+
+    req.session.user = {
+      ...req.session.user,
+      ...rows[0]
+    };
+
+    res.json({
+      message: "Profile updated successfully.",
+      user: req.session.user
+    });
+  } catch (error) {
+    console.error("Update profile error:", error);
+    res.status(500).json({ message: "Failed to update profile." });
+  }
 });
 
 app.post("/logout", (req, res) => {

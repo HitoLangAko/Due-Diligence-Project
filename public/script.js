@@ -52,7 +52,9 @@ const customPageLabels = {
   "department-reviews": "Department Reviews",
   "assessment-review": "Assessment Review",
   "reporting-signoff": "Reporting Signoff",
-  "assessment-summary": "Assessment Summary"
+  "assessment-summary": "Assessment Summary",
+  profile: "Profile Settings",
+  help: "Help"
 };
 
 const pageTitle = document.getElementById("pageTitle");
@@ -136,6 +138,15 @@ const summaryInfosecStatus = document.getElementById("summaryInfosecStatus");
 const summarySignoffStatus = document.getElementById("summarySignoffStatus");
 const rejectAssessmentBtn = document.getElementById("rejectAssessmentBtn");
 const approveAssessmentBtn = document.getElementById("approveAssessmentBtn");
+const profileBtn = document.getElementById("profileBtn");
+const helpBtn = document.getElementById("helpBtn");
+const profileForm = document.getElementById("profileForm");
+const profilePhotoInput = document.getElementById("profilePhotoInput");
+const profilePhotoPreview = document.getElementById("profilePhotoPreview");
+const profileFirstName = document.getElementById("profileFirstName");
+const profileLastName = document.getElementById("profileLastName");
+const profileJobTitle = document.getElementById("profileJobTitle");
+const profileWorkEmail = document.getElementById("profileWorkEmail");
 
 function getRoleLabel(role = currentRole) {
   return roleLabels[role] || role || "User";
@@ -606,10 +617,12 @@ function applyRoleLayout() {
     vendorAssessmentCard.classList.toggle("hidden", isDepartmentRole());
   }
 
-  if (accountAvatar) accountAvatar.textContent = initial;
-  if (accountMenuAvatar) accountMenuAvatar.textContent = initial;
-  if (accountUserName) accountUserName.textContent = currentUser.full_name || "Account";
-  if (accountMenuUserName) accountMenuUserName.textContent = currentUser.full_name || "User";
+  const displayName = `${currentUser.first_name || ""} ${currentUser.last_name || ""}`.trim() || currentUser.full_name || "Account";
+
+  if (accountUserName) accountUserName.textContent = displayName;
+  if (accountMenuUserName) accountMenuUserName.textContent = displayName;
+
+  updateProfilePhotoUI(currentUser.profile_photo_path);
   if (accountRoleText) accountRoleText.textContent = label;
   if (accountMenuRoleText) accountMenuRoleText.textContent = label;
 
@@ -670,6 +683,9 @@ function showPage(page) {
   const label = pageLabel(page);
   if (pageTitle) pageTitle.textContent = label;
   if (breadcrumb) breadcrumb.textContent = `${getRoleLabel(currentRole)} / ${label}`;
+  if (page === "profile") {
+  fillProfileForm();
+  }
   refreshCurrentPage(page);
 }
 
@@ -1882,6 +1898,82 @@ async function loadEmployeeAssessment(assessmentId) {
   renderDepartmentFormQuestions();
 }
 
+function updateProfilePhotoUI(photoPath) {
+  if (!profilePhotoPreview) return;
+
+  if (photoPath) {
+    profilePhotoPreview.innerHTML = `
+      <img src="${escapeHTML(photoPath)}" alt="Profile Photo" />
+    `;
+  } else {
+    profilePhotoPreview.innerHTML = `<i class="fa-solid fa-user"></i>`;
+  }
+
+  if (accountAvatar) {
+    if (photoPath) {
+      accountAvatar.innerHTML = `<img src="${escapeHTML(photoPath)}" alt="Profile" />`;
+    } else {
+      accountAvatar.textContent = getRoleLabel(currentRole).charAt(0).toUpperCase();
+    }
+  }
+
+  if (accountMenuAvatar) {
+    if (photoPath) {
+      accountMenuAvatar.innerHTML = `<img src="${escapeHTML(photoPath)}" alt="Profile" />`;
+    } else {
+      accountMenuAvatar.textContent = getRoleLabel(currentRole).charAt(0).toUpperCase();
+    }
+  }
+}
+
+function fillProfileForm() {
+  if (!currentUser) return;
+
+  const fullNameParts = String(currentUser.full_name || "").split(" ");
+  const fallbackFirstName = fullNameParts[0] || "";
+  const fallbackLastName = fullNameParts.slice(1).join(" ") || "";
+
+  if (profileFirstName) profileFirstName.value = currentUser.first_name || fallbackFirstName;
+  if (profileLastName) profileLastName.value = currentUser.last_name || fallbackLastName;
+  if (profileJobTitle) profileJobTitle.value = currentUser.job_title || "";
+  if (profileWorkEmail) profileWorkEmail.value = currentUser.work_email || currentUser.email || "";
+
+  updateProfilePhotoUI(currentUser.profile_photo_path);
+}
+
+async function saveProfile(event) {
+  event.preventDefault();
+
+  const formData = new FormData();
+  formData.append("first_name", profileFirstName?.value.trim() || "");
+  formData.append("last_name", profileLastName?.value.trim() || "");
+  formData.append("job_title", profileJobTitle?.value.trim() || "");
+  formData.append("work_email", profileWorkEmail?.value.trim() || "");
+
+  if (profilePhotoInput?.files?.length) {
+    formData.append("profile_photo", profilePhotoInput.files[0]);
+  }
+
+  try {
+    const data = await api("/profile", {
+      method: "POST",
+      body: formData
+    });
+
+    currentUser = data.user;
+
+    const displayName = `${currentUser.first_name || ""} ${currentUser.last_name || ""}`.trim() || currentUser.full_name;
+
+    if (accountUserName) accountUserName.textContent = displayName;
+    if (accountMenuUserName) accountMenuUserName.textContent = displayName;
+
+    updateProfilePhotoUI(currentUser.profile_photo_path);
+    showToast("Profile updated successfully.");
+  } catch (error) {
+    alert(error.message || "Failed to update profile.");
+  }
+}
+
 function setupEvents() {
   document.querySelectorAll("[data-page]").forEach((button) => {
     button.addEventListener("click", () => showPage(button.dataset.page));
@@ -1964,6 +2056,60 @@ function setupEvents() {
       }
     });
   }
+
+  if (profileBtn) {
+  profileBtn.addEventListener("click", () => {
+    if (accountMenu) accountMenu.classList.add("hidden");
+    showPage("profile");
+  });
+}
+
+if (helpBtn) {
+  helpBtn.addEventListener("click", () => {
+    if (accountMenu) accountMenu.classList.add("hidden");
+    showPage("help");
+  });
+}
+
+if (profilePhotoInput) {
+  profilePhotoInput.addEventListener("change", () => {
+    const file = profilePhotoInput.files?.[0];
+    if (!file) return;
+
+    const previewUrl = URL.createObjectURL(file);
+    updateProfilePhotoUI(previewUrl);
+  });
+}
+
+if (profileForm) {
+  profileForm.addEventListener("submit", saveProfile);
+}if (profileBtn) {
+  profileBtn.addEventListener("click", () => {
+    if (accountMenu) accountMenu.classList.add("hidden");
+    showPage("profile");
+  });
+}
+
+if (helpBtn) {
+  helpBtn.addEventListener("click", () => {
+    if (accountMenu) accountMenu.classList.add("hidden");
+    showPage("help");
+  });
+}
+
+if (profilePhotoInput) {
+  profilePhotoInput.addEventListener("change", () => {
+    const file = profilePhotoInput.files?.[0];
+    if (!file) return;
+
+    const previewUrl = URL.createObjectURL(file);
+    updateProfilePhotoUI(previewUrl);
+  });
+}
+
+if (profileForm) {
+  profileForm.addEventListener("submit", saveProfile);
+}
 
   if (createInfoSecAssessmentBtn) createInfoSecAssessmentBtn.addEventListener("click", createOrStartAssessment);
   if (cancelInfoSecAssessmentBtn) cancelInfoSecAssessmentBtn.addEventListener("click", () => showPage(isDepartmentRole() ? "vendor-queue" : "my-submissions"));

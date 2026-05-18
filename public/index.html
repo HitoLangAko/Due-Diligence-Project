@@ -99,6 +99,7 @@
         </button>
 
         <div class="account-menu hidden" id="accountMenu">
+          <div class="account-menu hidden" id="accountMenu">
           <div class="account-menu-head">
             <div class="account-menu-avatar" id="accountMenuAvatar">U</div>
 
@@ -109,6 +110,18 @@
 
             <i class="fa-solid fa-chevron-right"></i>
           </div>
+
+          <div class="account-line"></div>
+
+          <button type="button" id="profileBtn" class="account-menu-action">
+            <i class="fa-solid fa-user"></i>
+            <span>Profile</span>
+          </button>
+
+          <button type="button" id="helpBtn" class="account-menu-action">
+            <i class="fa-solid fa-circle-question"></i>
+            <span>Help</span>
+          </button>
 
           <div class="account-line"></div>
 
@@ -777,6 +790,96 @@
           </div>
         </div>
       </section>
+
+      <section class="page" id="profilePage">
+  <div class="profile-settings-card">
+    <div class="profile-card-header">
+      <h3>Profile Settings</h3>
+      <p>Manage your account information and profile photo.</p>
+    </div>
+
+    <form id="profileForm" enctype="multipart/form-data">
+      <div class="profile-layout">
+        <div class="profile-photo-area">
+          <div class="profile-photo-preview" id="profilePhotoPreview">
+            <i class="fa-solid fa-user"></i>
+          </div>
+
+          <label for="profilePhotoInput" class="profile-upload-btn">
+            <i class="fa-solid fa-upload"></i>
+            Upload Photo
+          </label>
+
+          <input
+            type="file"
+            id="profilePhotoInput"
+            name="profile_photo"
+            class="hidden"
+            accept="image/*"
+          />
+        </div>
+
+        <div class="profile-fields-area">
+          <div class="form-grid two-col">
+            <div class="field-group">
+              <label>First Name</label>
+              <input type="text" id="profileFirstName" placeholder="Enter first name" />
+            </div>
+
+            <div class="field-group">
+              <label>Last Name</label>
+              <input type="text" id="profileLastName" placeholder="Enter last name" />
+            </div>
+          </div>
+
+          <div class="form-grid two-col">
+            <div class="field-group">
+              <label>Job Title</label>
+              <input type="text" id="profileJobTitle" placeholder="Enter job title" />
+            </div>
+
+            <div class="field-group">
+              <label>Work Email</label>
+              <input type="email" id="profileWorkEmail" placeholder="Enter work email" />
+            </div>
+          </div>
+
+          <div class="profile-actions">
+            <button type="submit" class="submit-draft-btn">
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</section>
+
+<section class="page" id="helpPage">
+  <div class="content-card">
+    <h3>Help</h3>
+    <p class="muted">
+      For assistance, contact your system administrator or project support lead.
+    </p>
+
+    <div class="help-list">
+      <div>
+        <strong>Employee</strong>
+        <p>Create vendors, submit vendor information, and create vendor assessments.</p>
+      </div>
+
+      <div>
+        <strong>Departments</strong>
+        <p>Review assigned assessments and submit department forms.</p>
+      </div>
+
+      <div>
+        <strong>Admin</strong>
+        <p>Review submissions, finalize assessments, and generate reports.</p>
+      </div>
+    </div>
+  </div>
+</section>
     </main>
   </div>
 
