@@ -2493,18 +2493,19 @@ function createSignoffSheet(workbook, signoffs) {
 
 app.get("/admin/export-excel", requireRole("admin"), async (req, res) => {
   try {
-    const selectedAssessmentId = req.query.assessment_id || null;
+    const requestedAssessmentId = req.query.assessment_id
+      ? Number(req.query.assessment_id)
+      : null;
 
-    const assessmentWhere = selectedAssessmentId
-      ? "WHERE va.assessment_id = ?"
-      : "";
+    const assessmentParams = [];
+    let assessmentWhere = "";
+    let assessmentLimit = "LIMIT 1";
 
-    const assessmentParams = selectedAssessmentId
-      ? [selectedAssessmentId]
-      : [];
-
-    const workbook = new ExcelJS.Workbook();
-
+    if (requestedAssessmentId && Number.isInteger(requestedAssessmentId)) {
+      assessmentWhere = "WHERE va.assessment_id = ?";
+      assessmentParams.push(requestedAssessmentId);
+      assessmentLimit = "";
+    }
 
     const assessments = await runQuery(
       `
@@ -2528,6 +2529,7 @@ app.get("/admin/export-excel", requireRole("admin"), async (req, res) => {
         LEFT JOIN users u ON va.created_by_user_id = u.user_id
         ${assessmentWhere}
         ORDER BY va.created_at DESC
+        ${assessmentLimit}
       `,
       assessmentParams
     );
@@ -2538,68 +2540,63 @@ app.get("/admin/export-excel", requireRole("admin"), async (req, res) => {
       });
     }
 
-    const selectedAssessment = assessments[0] || {};
-    const selectedAssessmentId = selectedAssessment.assessment_id || requestedAssessmentId || null;
+    const selectedAssessment = assessments[0];
+    const selectedAssessmentId = selectedAssessment.assessment_id;
 
-    let answers = [];
-    let signoffs = [];
+    const answers = await runQuery(
+      `
+        SELECT
+          da.department_assessment_id,
+          da.assessment_id,
+          da.department_role,
+          da.status AS department_status,
+          va.assessment_code,
+          va.vendor_id,
+          v.company_name,
+          ans.section_name,
+          ans.question_index,
+          ans.question_text,
+          ans.response,
+          ans.explanation,
+          ans.artifact_name,
+          ans.artifact_path
+        FROM department_answers ans
+        JOIN department_assessments da
+          ON ans.department_assessment_id = da.department_assessment_id
+        JOIN vendor_assessments va
+          ON da.assessment_id = va.assessment_id
+        JOIN vendors v
+          ON va.vendor_id = v.vendor_id
+        WHERE va.assessment_id = ?
+        ORDER BY
+          FIELD(da.department_role, 'employee', 'management', 'it', 'compliance', 'dpo', 'hr', 'infosec'),
+          ans.question_index ASC
+      `,
+      [selectedAssessmentId]
+    );
 
-    if (selectedAssessmentId) {
-      answers = await runQuery(
-        `
-          SELECT
-            da.department_assessment_id,
-            da.assessment_id,
-            da.department_role,
-            da.status AS department_status,
-            va.assessment_code,
-            va.vendor_id,
-            v.company_name,
-            ans.section_name,
-            ans.question_index,
-            ans.question_text,
-            ans.response,
-            ans.explanation,
-            ans.artifact_name,
-            ans.artifact_path
-          FROM department_answers ans
-          JOIN department_assessments da
-            ON ans.department_assessment_id = da.department_assessment_id
-          JOIN vendor_assessments va
-            ON da.assessment_id = va.assessment_id
-          JOIN vendors v
-            ON va.vendor_id = v.vendor_id
-          WHERE va.assessment_id = ?
-          ORDER BY
-            FIELD(da.department_role, 'employee', 'management', 'it', 'compliance', 'dpo', 'hr', 'infosec'),
-            ans.question_index ASC
-        `,
-        [selectedAssessmentId]
-      );
-
-      signoffs = await runQuery(
-        `
-          SELECT
-            s.signoff_id,
-            s.assessment_id,
-            s.department_assessment_id,
-            s.role_name,
-            s.signer_name,
-            s.signoff_status,
-            s.signed_at,
-            u.full_name AS created_by
-          FROM sign_offs s
-          LEFT JOIN department_assessments da
-            ON s.department_assessment_id = da.department_assessment_id
-          LEFT JOIN users u
-            ON s.created_by_user_id = u.user_id
-          WHERE s.assessment_id = ?
-          OR da.assessment_id = ?
-          ORDER BY s.created_at DESC
-        `,
-        [selectedAssessmentId, selectedAssessmentId]
-      );
-    }
+    const signoffs = await runQuery(
+      `
+        SELECT
+          s.signoff_id,
+          s.assessment_id,
+          s.department_assessment_id,
+          s.role_name,
+          s.signer_name,
+          s.signoff_status,
+          s.signed_at,
+          u.full_name AS created_by
+        FROM sign_offs s
+        LEFT JOIN department_assessments da
+          ON s.department_assessment_id = da.department_assessment_id
+        LEFT JOIN users u
+          ON s.created_by_user_id = u.user_id
+        WHERE s.assessment_id = ?
+        OR da.assessment_id = ?
+        ORDER BY s.created_at DESC
+      `,
+      [selectedAssessmentId, selectedAssessmentId]
+    );
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = "Validify";
@@ -2610,6 +2607,9 @@ app.get("/admin/export-excel", requireRole("admin"), async (req, res) => {
     createSignoffSheet(workbook, signoffs);
 
     const safeCode = selectedAssessment.assessment_code || "Due_Diligence_Report";
+    const safeCompanyName = String(selectedAssessment.company_name || "Vendor")
+      .replace(/[^a-zA-Z0-9-_ ]/g, "")
+      .replace(/\s+/g, "_");
 
     res.setHeader(
       "Content-Type",
@@ -2618,7 +2618,7 @@ app.get("/admin/export-excel", requireRole("admin"), async (req, res) => {
 
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=Validify_${safeCode}_Due_Diligence_Report.xlsx`
+      `attachment; filename=Validify_${safeCode}_${safeCompanyName}_Due_Diligence_Report.xlsx`
     );
 
     await workbook.xlsx.write(res);
@@ -2630,7 +2630,6 @@ app.get("/admin/export-excel", requireRole("admin"), async (req, res) => {
     });
   }
 });
-
 
 const PORT = process.env.PORT || 3000;
 
