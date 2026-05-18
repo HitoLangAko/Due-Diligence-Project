@@ -2505,22 +2505,46 @@ body[data-role="employee"] .top-actions .employee-only {
 #vendorAssessmentPage .currently-assessing-card .muted {
   margin-bottom: 0;
 }
-
-/* ALL DEPARTMENT USERS USE INFOSEC-STYLE WORKFLOW */
-body[data-role="it"] .nav-menu,
-body[data-role="infosec"] .nav-menu,
-body[data-role="management"] .nav-menu,
-body[data-role="dpo"] .nav-menu,
-body[data-role="hr"] .nav-menu,
-body[data-role="compliance"] .nav-menu {
-  gap: 7px;
+/* SHARED VENDOR ASSESSMENT WORKFLOW */
+body[data-role="employee"] #vendorAssessmentPage .infosec-form-card .vendor-form-actions,
+body[data-role="employee"] #pendingApprovalPage,
+body[data-role="employee"] #signoffPage,
+body[data-role="employee"] #vendorQueuePage {
+  display: none !important;
 }
 
-body[data-role="it"] .nav-link,
-body[data-role="infosec"] .nav-link,
-body[data-role="management"] .nav-link,
-body[data-role="dpo"] .nav-link,
-body[data-role="hr"] .nav-link,
-body[data-role="compliance"] .nav-link {
-  min-height: 44px;
+#vendorAssessmentPage .infosec-form-card {
+  min-height: auto !important;
+}
+
+#vendorAssessmentPage .is-group-title {
+  margin-top: 22px;
+}
+
+#vendorAssessmentPage .status-pending-admin-approval,
+.status-pending-admin-approval {
+  background: #dbeafe;
+  color: #1e40af;
+  border-color: #60a5fa;
+}
+
+#vendorAssessmentPage .status-in-review,
+.status-in-review {
+  background: #dbeafe;
+  color: #1e40af;
+  border-color: #60a5fa;
+}
+
+#vendorAssessmentPage .status-pending,
+.status-pending {
+  background: #fed7aa;
+  color: #7c2d12;
+  border-color: #fb923c;
+}
+
+#vendorAssessmentPage .status-draft,
+.status-draft {
+  background: #cbd5e1;
+  color: #1e293b;
+  border-color: #94a3b8;
 }

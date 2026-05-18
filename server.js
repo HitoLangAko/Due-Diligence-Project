@@ -30,122 +30,151 @@ const departmentRoles = [
   "compliance"
 ];
 
-const infoSecQuestions = [
-  "Is there a dedicated security officer or team responsible for overseeing the implementation of the information security programs, awareness, and compliance in your organization?",
-  "Does your security officer report to senior management or part of the organization's steering committee?",
-  "Do you have documented security policies?",
-  "Are the security policies board approved?",
-  "Are security policies regularly reviewed to align with ISO 27001, PCI DSS, NIST, or similar standards?",
-  "Does your organization undergo regular internal and external security audits?",
-  "Do you comply with relevant local and international laws and security regulations?",
-  "Are security requirements incorporated in contracts, including data protection clauses?",
-  "Do you have an established Information Security Awareness Program?",
-  "Are roles and access rights following the least-privilege principle?",
-  "Are user privileges regularly reviewed and updated?",
-  "Are access logs to sensitive data maintained for access review?",
-  "Does your organization encrypt communications and data stored in IT facilities, including data at rest and data in transit?",
-  "Do you perform application security testing or assessment before production deployment?",
-  "Do you have a security incident response team and procedures in place?",
-  "Do you have an Incident Response Plan for ransomware, phishing, and data breach scenarios?"
-];
-
-const departmentQuestionSets = {
-  it: [
-    { section_name: "IT Risk Management", question_text: "Does the vendor maintain an inventory of systems, applications, and technology assets used to deliver the service?" },
-    { section_name: "IT Risk Management", question_text: "Does the vendor have documented procedures for secure system configuration and change management?" },
-    { section_name: "IT Risk Management", question_text: "Does the vendor perform vulnerability assessment or patch management on its systems?" },
-    { section_name: "IT Risk Management", question_text: "Does the vendor maintain backup and recovery procedures for systems supporting the service?" },
-    { section_name: "IT Risk Management", question_text: "Does the vendor monitor system availability, performance, and technical incidents?" },
-    { section_name: "IT Risk Management", question_text: "Does the vendor have controls for third-party tools, integrations, and system access?" }
-  ],
-  infosec: infoSecQuestions.map((question_text) => ({
-    section_name: "Information Security",
-    question_text
-  })),
-  management: [
-    { section_name: "Consumer", question_text: "How do you ensure that client complaints are addressed quickly and adequately?" },
-    { section_name: "Consumer", question_text: "Does the vendor provide clear service terms, limitations, and responsibilities to customers or clients?" },
-    { section_name: "Consumer", question_text: "Does the vendor have procedures for notifying the company about customer-impacting incidents?" },
-    { section_name: "Consumer", question_text: "Does the vendor maintain proper records related to consumer or customer transactions?" },
-    { section_name: "Resiliency", question_text: "Does the vendor have a documented Business Continuity Plan?" },
-    { section_name: "Resiliency", question_text: "Does the vendor have a documented Disaster Recovery Plan?" },
-    { section_name: "Resiliency", question_text: "Does the vendor test recovery procedures regularly?" },
-    { section_name: "Resiliency", question_text: "Does the vendor define Recovery Time Objective and Recovery Point Objective for critical services?" }
-  ],
-  dpo: [
-    { section_name: "Data Privacy", question_text: "Does the vendor process, store, or transmit personal data on behalf of the company?" },
-    { section_name: "Data Privacy", question_text: "Does the vendor have documented privacy policies and data protection procedures?" },
-    { section_name: "Data Privacy", question_text: "Does the vendor follow consent, notice, and lawful processing requirements for personal data?" },
-    { section_name: "Data Privacy", question_text: "Does the vendor have a procedure for handling data subject requests?" },
-    { section_name: "Data Privacy", question_text: "Does the vendor have a process for reporting data privacy incidents or breaches?" },
-    { section_name: "Data Privacy", question_text: "Does the vendor apply retention and secure disposal rules for personal data?" }
-  ],
-  hr: [
-    { section_name: "Human Resources", question_text: "Does the vendor conduct background checks or screening for personnel assigned to the service?" },
-    { section_name: "Human Resources", question_text: "Does the vendor provide security, privacy, or compliance training to its employees?" },
-    { section_name: "Human Resources", question_text: "Does the vendor require confidentiality agreements for personnel handling company information?" },
-    { section_name: "Human Resources", question_text: "Does the vendor have onboarding and offboarding procedures for user access?" },
-    { section_name: "Human Resources", question_text: "Does the vendor have disciplinary procedures for policy or compliance violations?" },
-    { section_name: "Human Resources", question_text: "Does the vendor maintain records of employee training and acknowledgements?" }
-  ],
-  compliance: [
-    { section_name: "Compliance", question_text: "Enumerate the top shareholders and officers of the vendor as indicated in the General Information Sheet." },
-    { section_name: "Compliance", question_text: "Does the vendor comply with applicable laws, regulations, and industry standards?" },
-    { section_name: "Compliance", question_text: "Does the vendor maintain documented compliance policies and procedures?" },
-    { section_name: "Compliance", question_text: "Has the vendor identified the regulatory requirements applicable to its services?" },
-    { section_name: "Compliance", question_text: "Does the vendor conduct periodic compliance reviews or audits?" },
-    { section_name: "Compliance", question_text: "Do you have policies and procedures to comply with AML and CFT regulations?" },
-    { section_name: "Compliance", question_text: "Will the service to be provided involve AML-related transactions?" },
-    { section_name: "Compliance", question_text: "Does the vendor have procedures for handling regulatory changes?" },
-    { section_name: "Resiliency", question_text: "Does the vendor have a documented Business Continuity Plan?" },
-    { section_name: "Resiliency", question_text: "Is there a specific alternate site documented in the BCP?" },
-    { section_name: "Resiliency", question_text: "Does the vendor have a documented Disaster Recovery Plan?" },
-    { section_name: "Resiliency", question_text: "Does the vendor perform regular backup procedures?" },
-    { section_name: "Resiliency", question_text: "Does the vendor test recovery procedures regularly?" },
-    { section_name: "Resiliency", question_text: "Does the vendor maintain communication procedures for business disruptions?" }
-  ]
+const roleLabels = {
+  it: "IT",
+  infosec: "InfoSec",
+  management: "Management",
+  dpo: "DPO",
+  hr: "HR",
+  compliance: "Compliance"
 };
 
-const assessmentPrefixes = {
+const assessmentCodePrefixes = {
   it: "IT",
-  infosec: "IA",
+  infosec: "IS",
   management: "MG",
   dpo: "DP",
   hr: "HR",
   compliance: "CP"
 };
 
-const defaultPurposes = {
-  it: "IT Risk Management",
-  infosec: "Information Security",
-  management: "Management Review",
-  dpo: "Data Privacy",
-  hr: "HR Review",
-  compliance: "Compliance Review"
+const resiliencyQuestions = [
+  "Does the vendor have a documented Business Continuity Plan?",
+  "Does the vendor have a documented Disaster Recovery Plan?",
+  "Does the vendor perform regular backup procedures?",
+  "Does the vendor test recovery procedures regularly?",
+  "Does the vendor have an incident escalation process?",
+  "Does the vendor have alternative facilities, systems, or processes in case of disruption?",
+  "Does the vendor define Recovery Time Objective and Recovery Point Objective?",
+  "Does the vendor maintain service availability during emergencies?",
+  "Does the vendor have communication procedures for business disruptions?",
+  "Does the vendor review and update its resiliency plan regularly?"
+];
+
+const departmentQuestionGroups = {
+  infosec: [
+    {
+      section_name: "Information Security",
+      questions: [
+        "Is there a dedicated security officer or team responsible for overseeing the implementation of the information security programs, awareness, and compliance in your organization?",
+        "Does your security officer report to senior management or part of the organization's steering committee?",
+        "Do you have documented security policies?",
+        "Are the security policies board approved?",
+        "Are security policies regularly reviewed to align with ISO 27001, PCI DSS, NIST, or similar standards?",
+        "Does your organization undergo regular internal and external security audits?",
+        "Do you comply with relevant local and international laws and security regulations?",
+        "Are security requirements incorporated in contracts, including data protection clauses?",
+        "Do you have an established Information Security Awareness Program?",
+        "Are roles and access rights following the least-privilege principle?",
+        "Are user privileges regularly reviewed and updated?",
+        "Are access logs to sensitive data maintained for access review?",
+        "Does your organization encrypt communications and data stored in IT facilities, including data at rest and data in transit?",
+        "Do you perform application security testing or assessment before production deployment?",
+        "Do you have a security incident response team and procedures in place?",
+        "Do you have an Incident Response Plan for ransomware, phishing, and data breach scenarios?"
+      ]
+    }
+  ],
+  compliance: [
+    {
+      section_name: "Compliance",
+      questions: [
+        "Does the vendor comply with applicable laws, regulations, and industry standards?",
+        "Does the vendor maintain documented compliance policies and procedures?",
+        "Has the vendor identified the regulatory requirements applicable to its services?",
+        "Does the vendor conduct periodic compliance reviews or audits?",
+        "Does the vendor have a process for reporting compliance violations or incidents?",
+        "Does the vendor train employees on compliance requirements?",
+        "Does the vendor maintain proper records for compliance monitoring?",
+        "Does the vendor include compliance obligations in contracts or service agreements?",
+        "Does the vendor have procedures for handling regulatory changes?",
+        "Does the vendor have any previous or current compliance violations, sanctions, or unresolved findings?"
+      ]
+    },
+    {
+      section_name: "Resiliency",
+      questions: resiliencyQuestions
+    }
+  ],
+  management: [
+    {
+      section_name: "Consumer",
+      questions: [
+        "Does the vendor directly or indirectly handle consumer or customer data?",
+        "Does the vendor have procedures for protecting customer information?",
+        "Does the vendor have a process for handling customer complaints or concerns?",
+        "Does the vendor comply with consumer protection requirements?",
+        "Does the vendor provide clear service terms, limitations, and responsibilities?",
+        "Does the vendor have procedures for notifying the company about customer-impacting incidents?",
+        "Does the vendor avoid misleading or unfair practices in service delivery?",
+        "Does the vendor maintain proper records related to consumer or customer transactions?"
+      ]
+    },
+    {
+      section_name: "Resiliency",
+      questions: resiliencyQuestions
+    }
+  ],
+  dpo: [
+    {
+      section_name: "Data Privacy",
+      questions: [
+        "Does the vendor process personal data on behalf of the company?",
+        "Does the vendor have a documented privacy policy or data protection policy?",
+        "Does the vendor identify the types of personal data being collected, stored, or processed?",
+        "Does the vendor apply access controls to personal data?",
+        "Does the vendor have procedures for data retention and disposal?",
+        "Does the vendor have a process for handling data subject requests?",
+        "Does the vendor have procedures for reporting privacy incidents or data breaches?",
+        "Does the vendor require confidentiality agreements for employees handling personal data?",
+        "Does the vendor conduct privacy awareness or data protection training?",
+        "Does the vendor use third parties or subprocessors that may access company or customer personal data?"
+      ]
+    }
+  ],
+  hr: [
+    {
+      section_name: "Human Resources",
+      questions: [
+        "Does the vendor perform employee background checks where applicable?",
+        "Does the vendor require employees to sign confidentiality or non-disclosure agreements?",
+        "Does the vendor conduct employee onboarding related to company policies and security expectations?",
+        "Does the vendor provide employee awareness training for data protection and professional conduct?",
+        "Does the vendor have a disciplinary process for policy violations?",
+        "Does the vendor have procedures for employee offboarding and access removal?",
+        "Does the vendor maintain records of employee training and policy acknowledgement?",
+        "Does the vendor comply with labor and employment requirements applicable to its services?"
+      ]
+    }
+  ],
+  it: [
+    {
+      section_name: "IT Risk Management",
+      questions: [
+        "Does the vendor have documented IT policies and procedures?",
+        "Does the vendor maintain an inventory of systems and applications used for service delivery?",
+        "Does the vendor use secure configuration standards for systems and endpoints?",
+        "Does the vendor perform patching and vulnerability management?",
+        "Does the vendor use endpoint protection or anti-malware controls?",
+        "Does the vendor enforce strong authentication and password controls?",
+        "Does the vendor maintain system activity logs for monitoring and investigation?",
+        "Does the vendor have backup and restoration procedures for critical systems?",
+        "Does the vendor restrict administrative privileges to authorized users?",
+        "Does the vendor have technical support or escalation procedures for system issues?"
+      ]
+    }
+  ]
 };
-
-function getDepartmentQuestions(role) {
-  const questions = departmentQuestionSets[role] || [];
-  return questions.map((item, index) => ({
-    question_index: index,
-    section_name: item.section_name || getRoleLabelForServer(role),
-    question_text: item.question_text || String(item)
-  }));
-}
-
-function getRoleLabelForServer(role) {
-  const labels = {
-    it: "IT",
-    infosec: "InfoSec",
-    management: "Management",
-    dpo: "DPO",
-    hr: "HR",
-    compliance: "Compliance"
-  };
-
-  return labels[role] || role;
-}
-
 
 app.use(cors());
 app.use(express.json());
@@ -208,14 +237,6 @@ db.query("SELECT 1", (err) => {
   console.log("Connected to MySQL database.");
 });
 
-function requireLogin(req, res, next) {
-  if (!req.session.user) {
-    return res.status(401).json({ message: "You must be logged in first." });
-  }
-
-  next();
-}
-
 function requireRole(role) {
   return function (req, res, next) {
     if (!req.session.user) {
@@ -223,9 +244,7 @@ function requireRole(role) {
     }
 
     if (req.session.user.role !== role) {
-      return res.status(403).json({
-        message: "You are not allowed to do this action."
-      });
+      return res.status(403).json({ message: "You are not allowed to do this action." });
     }
 
     next();
@@ -239,13 +258,23 @@ function requireAnyRole(roles) {
     }
 
     if (!roles.includes(req.session.user.role)) {
-      return res.status(403).json({
-        message: "You are not allowed to do this action."
-      });
+      return res.status(403).json({ message: "You are not allowed to do this action." });
     }
 
     next();
   };
+}
+
+function requireDepartment(req, res, next) {
+  if (!req.session.user) {
+    return res.status(401).json({ message: "You must be logged in first." });
+  }
+
+  if (!departmentRoles.includes(req.session.user.role)) {
+    return res.status(403).json({ message: "Department account required." });
+  }
+
+  next();
 }
 
 function runQuery(sql, params = []) {
@@ -287,16 +316,7 @@ async function initDatabase() {
       full_name VARCHAR(150) NOT NULL,
       email VARCHAR(150) NOT NULL UNIQUE,
       password_hash VARCHAR(255) NOT NULL,
-      role ENUM(
-        'employee',
-        'it',
-        'infosec',
-        'management',
-        'dpo',
-        'hr',
-        'compliance',
-        'admin'
-      ) NOT NULL,
+      role ENUM('employee', 'it', 'infosec', 'management', 'dpo', 'hr', 'compliance', 'admin') NOT NULL,
       email_verified TINYINT(1) DEFAULT 1,
       verification_token_hash VARCHAR(255) NULL,
       verification_token_expires DATETIME NULL,
@@ -311,14 +331,7 @@ async function initDatabase() {
   try {
     await runQuery(`
       ALTER TABLE users MODIFY role ENUM(
-        'employee',
-        'it',
-        'infosec',
-        'management',
-        'dpo',
-        'hr',
-        'compliance',
-        'admin'
+        'employee', 'it', 'infosec', 'management', 'dpo', 'hr', 'compliance', 'admin'
       ) NOT NULL
     `);
   } catch (error) {
@@ -346,24 +359,11 @@ async function initDatabase() {
   await addColumnIfMissing("vendors", "created_by_user_id", "INT NULL");
   await addColumnIfMissing("vendors", "overall_status", "ENUM('Pending', 'In Review', 'Completed', 'Rejected') DEFAULT 'Pending'");
 
-  try {
-    await runQuery("ALTER TABLE vendors MODIFY user_id INT NULL");
-  } catch (error) {
-    console.log("Skipping user_id nullable update:", error.message);
-  }
-
   await runQuery(`
     CREATE TABLE IF NOT EXISTS department_reviews (
       review_id INT AUTO_INCREMENT PRIMARY KEY,
       vendor_id INT NOT NULL,
-      department_role ENUM(
-        'it',
-        'infosec',
-        'management',
-        'dpo',
-        'hr',
-        'compliance'
-      ) NOT NULL,
+      department_role ENUM('it', 'infosec', 'management', 'dpo', 'hr', 'compliance') NOT NULL,
       reviewer_user_id INT NULL,
       review_status ENUM('Pending', 'Reviewed', 'Rejected', 'Approved') DEFAULT 'Pending',
       comments TEXT,
@@ -374,75 +374,41 @@ async function initDatabase() {
   `);
 
   await runQuery(`
-    CREATE TABLE IF NOT EXISTS infosec_assessments (
+    CREATE TABLE IF NOT EXISTS vendor_assessments (
       assessment_id INT AUTO_INCREMENT PRIMARY KEY,
       assessment_code VARCHAR(30) UNIQUE,
       vendor_id INT NOT NULL,
-      submitted_by_user_id INT NOT NULL,
-      purpose VARCHAR(150) DEFAULT 'Information Security',
+      created_by_user_id INT NOT NULL,
+      purpose VARCHAR(150) NOT NULL,
       assessment_date DATE NULL,
-      status ENUM('Draft', 'Pending Admin Approval', 'Approved', 'Rejected') DEFAULT 'Draft',
-      admin_comment TEXT NULL,
-      submitted_at TIMESTAMP NULL,
-      approved_at TIMESTAMP NULL,
+      overall_status ENUM('Draft', 'In Review', 'Pending Admin Approval', 'Approved', 'Rejected', 'Completed') DEFAULT 'In Review',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )
   `);
-
-  await addColumnIfMissing("infosec_assessments", "assessment_date", "DATE NULL");
-
-  await runQuery(`
-    CREATE TABLE IF NOT EXISTS infosec_answers (
-      answer_id INT AUTO_INCREMENT PRIMARY KEY,
-      assessment_id INT NOT NULL,
-      question_index INT NOT NULL,
-      question_text TEXT NOT NULL,
-      response ENUM('Yes', 'No', 'N/A') NOT NULL,
-      explanation TEXT NULL,
-      artifact_path VARCHAR(255) NULL,
-      artifact_name VARCHAR(255) NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-      UNIQUE KEY unique_infosec_answer (assessment_id, question_index)
-    )
-  `);
-
 
   await runQuery(`
     CREATE TABLE IF NOT EXISTS department_assessments (
-      assessment_id INT AUTO_INCREMENT PRIMARY KEY,
-      assessment_code VARCHAR(30) UNIQUE,
-      department_role ENUM(
-        'it',
-        'infosec',
-        'management',
-        'dpo',
-        'hr',
-        'compliance'
-      ) NOT NULL,
-      vendor_id INT NOT NULL,
-      submitted_by_user_id INT NOT NULL,
-      purpose VARCHAR(150) DEFAULT NULL,
-      assessment_date DATE NULL,
-      status ENUM('Draft', 'Pending Admin Approval', 'Approved', 'Rejected') DEFAULT 'Draft',
+      department_assessment_id INT AUTO_INCREMENT PRIMARY KEY,
+      assessment_id INT NOT NULL,
+      department_role ENUM('it', 'infosec', 'management', 'dpo', 'hr', 'compliance') NOT NULL,
+      submitted_by_user_id INT NULL,
+      status ENUM('Pending', 'Draft', 'Pending Admin Approval', 'Approved', 'Rejected') DEFAULT 'Pending',
       admin_comment TEXT NULL,
       submitted_at TIMESTAMP NULL,
       approved_at TIMESTAMP NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY unique_department_assessment (assessment_id, department_role)
     )
   `);
-
-  await addColumnIfMissing("department_assessments", "assessment_date", "DATE NULL");
-  await addColumnIfMissing("department_assessments", "admin_comment", "TEXT NULL");
 
   await runQuery(`
     CREATE TABLE IF NOT EXISTS department_answers (
       answer_id INT AUTO_INCREMENT PRIMARY KEY,
-      assessment_id INT NOT NULL,
+      department_assessment_id INT NOT NULL,
+      section_name VARCHAR(150) NOT NULL,
       question_index INT NOT NULL,
-      section_name VARCHAR(150) NULL,
       question_text TEXT NOT NULL,
       response ENUM('Yes', 'No', 'N/A') NOT NULL,
       explanation TEXT NULL,
@@ -450,16 +416,15 @@ async function initDatabase() {
       artifact_name VARCHAR(255) NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-      UNIQUE KEY unique_department_answer (assessment_id, question_index)
+      UNIQUE KEY unique_department_answer (department_assessment_id, question_index)
     )
   `);
-
-  await addColumnIfMissing("department_answers", "section_name", "VARCHAR(150) NULL");
 
   await runQuery(`
     CREATE TABLE IF NOT EXISTS sign_offs (
       signoff_id INT AUTO_INCREMENT PRIMARY KEY,
       assessment_id INT NULL,
+      department_assessment_id INT NULL,
       role_name VARCHAR(100) NOT NULL,
       signer_name VARCHAR(150),
       signoff_status ENUM('Pending', 'Signed') DEFAULT 'Pending',
@@ -471,6 +436,7 @@ async function initDatabase() {
     )
   `);
 
+  await addColumnIfMissing("sign_offs", "department_assessment_id", "INT NULL");
   await addColumnIfMissing("sign_offs", "signature_file_path", "VARCHAR(255) NULL");
 
   console.log("Database tables checked.");
@@ -479,6 +445,109 @@ async function initDatabase() {
 initDatabase().catch((error) => {
   console.error("Database init error:", error);
 });
+
+function flattenQuestionsForRole(role) {
+  const groups = departmentQuestionGroups[role] || [];
+  const flattened = [];
+
+  groups.forEach((group) => {
+    group.questions.forEach((question) => {
+      flattened.push({
+        question_index: flattened.length,
+        section_name: group.section_name,
+        question_text: question
+      });
+    });
+  });
+
+  return flattened;
+}
+
+function makeAssessmentCode(assessmentId) {
+  return `VA-${String(assessmentId).padStart(3, "0")}`;
+}
+
+async function ensureDepartmentAssessment(assessmentId, departmentRole, statusWhenNew = "Pending") {
+  const existing = await runQuery(
+    `
+      SELECT *
+      FROM department_assessments
+      WHERE assessment_id = ?
+      AND department_role = ?
+      LIMIT 1
+    `,
+    [assessmentId, departmentRole]
+  );
+
+  if (existing.length > 0) {
+    return existing[0];
+  }
+
+  const result = await runQuery(
+    `
+      INSERT INTO department_assessments
+      (assessment_id, department_role, status)
+      VALUES (?, ?, ?)
+    `,
+    [assessmentId, departmentRole, statusWhenNew]
+  );
+
+  const rows = await runQuery(
+    `
+      SELECT *
+      FROM department_assessments
+      WHERE department_assessment_id = ?
+    `,
+    [result.insertId]
+  );
+
+  return rows[0];
+}
+
+async function createAllDepartmentAssessments(assessmentId) {
+  const values = departmentRoles.map((role) => [assessmentId, role, "Pending"]);
+
+  await runQuery(
+    `
+      INSERT IGNORE INTO department_assessments
+      (assessment_id, department_role, status)
+      VALUES ?
+    `,
+    [values]
+  );
+}
+
+async function updateMainAssessmentStatus(assessmentId) {
+  const rows = await runQuery(
+    `
+      SELECT status
+      FROM department_assessments
+      WHERE assessment_id = ?
+    `,
+    [assessmentId]
+  );
+
+  let overallStatus = "In Review";
+
+  if (rows.some((row) => row.status === "Rejected")) {
+    overallStatus = "Rejected";
+  } else if (rows.length >= departmentRoles.length && rows.every((row) => row.status === "Approved")) {
+    overallStatus = "Approved";
+  } else if (rows.some((row) => row.status === "Pending Admin Approval")) {
+    overallStatus = "Pending Admin Approval";
+  } else if (rows.every((row) => row.status === "Pending")) {
+    overallStatus = "In Review";
+  }
+
+  await runQuery(
+    `
+      UPDATE vendor_assessments
+      SET overall_status = ?
+      WHERE assessment_id = ?
+    `,
+    [overallStatus, assessmentId]
+  );
+}
 
 /* AUTH ROUTES */
 
@@ -496,54 +565,31 @@ app.post("/register", async (req, res) => {
   try {
     const passwordHash = await bcrypt.hash(password, 10);
 
-    const sql = `
-      INSERT INTO users
-      (
-        full_name,
-        email,
-        password_hash,
-        role,
-        email_verified,
-        verification_token_hash,
-        verification_token_expires
-      )
-      VALUES (?, ?, ?, ?, 1, NULL, NULL)
-    `;
+    await runQuery(
+      `
+        INSERT INTO users
+        (full_name, email, password_hash, role, email_verified, verification_token_hash, verification_token_expires)
+        VALUES (?, ?, ?, ?, 1, NULL, NULL)
+      `,
+      [full_name, email, passwordHash, role]
+    );
 
-    db.query(sql, [full_name, email, passwordHash, role], (err) => {
-      if (err) {
-        if (err.code === "ER_DUP_ENTRY") {
-          return res.status(400).json({ message: "Email already exists." });
-        }
-
-        console.error("Register error:", err);
-        return res.status(500).json({ message: "Failed to register account." });
-      }
-
-      res.json({
-        message: "Account registered successfully. You can now log in."
-      });
-    });
+    res.json({ message: "Account registered successfully. You can now log in." });
   } catch (error) {
-    console.error("Register server error:", error);
-    res.status(500).json({ message: "Server error during registration." });
+    if (error.code === "ER_DUP_ENTRY") {
+      return res.status(400).json({ message: "Email already exists." });
+    }
+
+    console.error("Register error:", error);
+    res.status(500).json({ message: "Failed to register account." });
   }
 });
 
-app.post("/login", (req, res) => {
+app.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
-  const sql = `
-    SELECT *
-    FROM users
-    WHERE email = ?
-  `;
-
-  db.query(sql, [email], async (err, results) => {
-    if (err) {
-      console.error("Login error:", err);
-      return res.status(500).json({ message: "Login failed." });
-    }
+  try {
+    const results = await runQuery("SELECT * FROM users WHERE email = ?", [email]);
 
     if (results.length === 0) {
       return res.status(401).json({ message: "Invalid email or password." });
@@ -563,11 +609,11 @@ app.post("/login", (req, res) => {
       role: user.role
     };
 
-    res.json({
-      message: "Login successful.",
-      user: req.session.user
-    });
-  });
+    res.json({ message: "Login successful.", user: req.session.user });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({ message: "Login failed." });
+  }
 });
 
 app.get("/me", (req, res) => {
@@ -586,7 +632,7 @@ app.post("/logout", (req, res) => {
 
 /* VENDOR ROUTES */
 
-app.post("/vendors", requireAnyRole(["employee", ...departmentRoles]), (req, res) => {
+app.post("/vendors", requireAnyRole(["employee", ...departmentRoles]), async (req, res) => {
   const {
     company_name,
     company_website,
@@ -597,1202 +643,676 @@ app.post("/vendors", requireAnyRole(["employee", ...departmentRoles]), (req, res
   } = req.body;
 
   if (!company_name || !product_services_offered || !contact_person_name) {
-    return res.status(400).json({
-      message: "Company name, services, and contact person are required."
-    });
+    return res.status(400).json({ message: "Company name, services, and contact person are required." });
   }
 
-  const createdByUserId = req.session.user.user_id;
+  try {
+    const createdByUserId = req.session.user.user_id;
 
-  const sql = `
-    INSERT INTO vendors
-    (
-      user_id,
-      company_name,
-      company_website,
-      product_services_offered,
-      contact_person_name,
-      contact_email,
-      contact_phone,
-      created_by_user_id,
-      overall_status
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Pending')
-  `;
+    const result = await runQuery(
+      `
+        INSERT INTO vendors
+        (user_id, company_name, company_website, product_services_offered, contact_person_name, contact_email, contact_phone, created_by_user_id, overall_status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Pending')
+      `,
+      [
+        createdByUserId,
+        company_name,
+        company_website || null,
+        product_services_offered,
+        contact_person_name,
+        contact_email || null,
+        contact_phone || null,
+        createdByUserId
+      ]
+    );
 
-  db.query(
-    sql,
-    [
-      createdByUserId,
-      company_name,
-      company_website || null,
-      product_services_offered,
-      contact_person_name,
-      contact_email || null,
-      contact_phone || null,
-      createdByUserId
-    ],
-    (err, result) => {
-      if (err) {
-        console.error("Insert vendor error:", err);
-        return res.status(500).json({ message: "Failed to save vendor." });
-      }
+    const vendorId = result.insertId;
+    const reviewValues = departmentRoles.map((role) => [vendorId, role, "Pending"]);
 
-      const vendorId = result.insertId;
-      const reviewValues = departmentRoles.map((role) => [vendorId, role, "Pending"]);
-
-      const reviewSql = `
+    await runQuery(
+      `
         INSERT IGNORE INTO department_reviews
-        (
-          vendor_id,
-          department_role,
-          review_status
-        )
+        (vendor_id, department_role, review_status)
         VALUES ?
-      `;
+      `,
+      [reviewValues]
+    );
 
-      db.query(reviewSql, [reviewValues], (reviewErr) => {
-        if (reviewErr) {
-          console.error("Create department reviews error:", reviewErr);
-          return res.status(500).json({
-            message: "Vendor saved, but failed to assign department reviews."
-          });
-        }
-
-        res.json({
-          message: "Vendor submitted to all departments.",
-          vendor_id: vendorId
-        });
-      });
-    }
-  );
+    res.json({ message: "Vendor saved. Create a vendor assessment to send it to departments.", vendor_id: vendorId });
+  } catch (error) {
+    console.error("Insert vendor error:", error);
+    res.status(500).json({ message: "Failed to save vendor." });
+  }
 });
 
-app.get("/vendors/mine", requireAnyRole(["employee", ...departmentRoles]), (req, res) => {
-  const sql = `
-    SELECT
-      v.vendor_id,
-      v.company_name,
-      v.company_website,
-      v.product_services_offered,
-      v.contact_person_name,
-      v.contact_email,
-      v.contact_phone,
-      v.overall_status,
-      v.created_at
-    FROM vendors v
-    WHERE v.created_by_user_id = ?
-    OR v.user_id = ?
-    ORDER BY v.created_at DESC
-  `;
-
-  db.query(sql, [req.session.user.user_id, req.session.user.user_id], (err, rows) => {
-    if (err) {
-      console.error("Fetch my submissions error:", err);
-      return res.status(500).json({ message: "Failed to load submissions." });
-    }
+app.get("/vendors/mine", requireAnyRole(["employee", ...departmentRoles]), async (req, res) => {
+  try {
+    const rows = await runQuery(
+      `
+        SELECT
+          v.vendor_id,
+          v.company_name,
+          v.company_website,
+          v.product_services_offered,
+          v.contact_person_name,
+          v.contact_email,
+          v.contact_phone,
+          v.overall_status,
+          v.created_at
+        FROM vendors v
+        WHERE v.created_by_user_id = ?
+        OR v.user_id = ?
+        ORDER BY v.created_at DESC
+      `,
+      [req.session.user.user_id, req.session.user.user_id]
+    );
 
     res.json(rows);
-  });
+  } catch (error) {
+    console.error("Fetch my vendors error:", error);
+    res.status(500).json({ message: "Failed to load submissions." });
+  }
 });
 
-/* DEPARTMENT ROUTES */
+/* MAIN VENDOR ASSESSMENT CREATED BY EMPLOYEE */
 
-app.get("/department/vendors", requireAnyRole(departmentRoles), (req, res) => {
+app.post("/vendor-assessments", requireAnyRole(["employee", ...departmentRoles]), async (req, res) => {
+  const { vendor_id, purpose, assessment_date } = req.body;
+
+  if (!vendor_id || !purpose || !assessment_date) {
+    return res.status(400).json({ message: "Vendor, purpose, and assessment date are required." });
+  }
+
+  try {
+    const vendorRows = await runQuery("SELECT * FROM vendors WHERE vendor_id = ?", [vendor_id]);
+
+    if (vendorRows.length === 0) {
+      return res.status(404).json({ message: "Vendor not found." });
+    }
+
+    const result = await runQuery(
+      `
+        INSERT INTO vendor_assessments
+        (vendor_id, created_by_user_id, purpose, assessment_date, overall_status)
+        VALUES (?, ?, ?, ?, 'In Review')
+      `,
+      [vendor_id, req.session.user.user_id, purpose, assessment_date]
+    );
+
+    const assessmentId = result.insertId;
+    const assessmentCode = makeAssessmentCode(assessmentId);
+
+    await runQuery("UPDATE vendor_assessments SET assessment_code = ? WHERE assessment_id = ?", [assessmentCode, assessmentId]);
+    await createAllDepartmentAssessments(assessmentId);
+    await runQuery("UPDATE vendors SET overall_status = 'In Review' WHERE vendor_id = ?", [vendor_id]);
+
+    res.json({
+      assessment_id: assessmentId,
+      assessment_code: assessmentCode,
+      vendor_id,
+      company_name: vendorRows[0].company_name,
+      product_services_offered: vendorRows[0].product_services_offered,
+      purpose,
+      assessment_date,
+      overall_status: "In Review"
+    });
+  } catch (error) {
+    console.error("Create vendor assessment error:", error);
+    res.status(500).json({ message: "Failed to create vendor assessment." });
+  }
+});
+
+app.get("/vendor-assessments/mine", requireAnyRole(["employee", ...departmentRoles]), async (req, res) => {
+  try {
+    const rows = await runQuery(
+      `
+        SELECT
+          va.assessment_id,
+          va.assessment_code,
+          va.vendor_id,
+          va.purpose,
+          va.assessment_date,
+          va.overall_status,
+          va.created_at,
+          v.company_name,
+          v.product_services_offered,
+          v.contact_person_name
+        FROM vendor_assessments va
+        JOIN vendors v ON va.vendor_id = v.vendor_id
+        WHERE va.created_by_user_id = ?
+        ORDER BY va.created_at DESC
+      `,
+      [req.session.user.user_id]
+    );
+
+    res.json(rows);
+  } catch (error) {
+    console.error("Fetch my vendor assessments error:", error);
+    res.status(500).json({ message: "Failed to load vendor assessments." });
+  }
+});
+
+/* GENERIC DEPARTMENT WORKFLOW */
+
+app.get("/department/questions", requireDepartment, (req, res) => {
+  res.json(flattenQuestionsForRole(req.session.user.role));
+});
+
+app.get("/department/queue", requireDepartment, async (req, res) => {
   const departmentRole = req.session.user.role;
 
-  const sql = `
-    SELECT
-      v.vendor_id,
-      v.company_name,
-      v.company_website,
-      v.product_services_offered,
-      v.contact_person_name,
-      v.contact_email,
-      v.contact_phone,
-      v.overall_status,
-      v.created_at,
-      u.full_name AS submitted_by,
-      dr.review_status,
-      dr.comments,
-      dr.reviewed_at
-    FROM department_reviews dr
-    JOIN vendors v ON dr.vendor_id = v.vendor_id
-    LEFT JOIN users u ON v.created_by_user_id = u.user_id
-    WHERE dr.department_role = ?
-    ORDER BY v.created_at DESC
-  `;
-
-  db.query(sql, [departmentRole], (err, rows) => {
-    if (err) {
-      console.error("Fetch department vendors error:", err);
-      return res.status(500).json({ message: "Failed to load department vendors." });
-    }
+  try {
+    const rows = await runQuery(
+      `
+        SELECT
+          va.assessment_id,
+          va.assessment_code,
+          va.vendor_id,
+          va.purpose,
+          va.assessment_date,
+          va.overall_status,
+          va.created_at,
+          v.company_name,
+          v.product_services_offered,
+          v.contact_person_name,
+          v.contact_email,
+          u.full_name AS created_by,
+          da.department_assessment_id,
+          da.department_role,
+          da.status AS department_status,
+          da.submitted_at
+        FROM vendor_assessments va
+        JOIN vendors v ON va.vendor_id = v.vendor_id
+        LEFT JOIN users u ON va.created_by_user_id = u.user_id
+        LEFT JOIN department_assessments da
+          ON va.assessment_id = da.assessment_id
+          AND da.department_role = ?
+        ORDER BY va.created_at DESC
+      `,
+      [departmentRole]
+    );
 
     res.json(rows);
-  });
+  } catch (error) {
+    console.error("Fetch department queue error:", error);
+    res.status(500).json({ message: "Failed to load department queue." });
+  }
 });
 
-app.patch("/department/reviews/:vendor_id", requireAnyRole(departmentRoles), (req, res) => {
+app.get("/department/assessments", requireDepartment, async (req, res) => {
+  const departmentRole = req.session.user.role;
+
+  try {
+    const rows = await runQuery(
+      `
+        SELECT
+          va.assessment_id,
+          va.assessment_code,
+          va.vendor_id,
+          va.purpose,
+          va.assessment_date,
+          va.overall_status,
+          va.created_at,
+          v.company_name,
+          v.product_services_offered,
+          da.department_assessment_id,
+          da.department_role,
+          da.status AS department_status,
+          da.submitted_by_user_id,
+          da.submitted_at
+        FROM vendor_assessments va
+        JOIN vendors v ON va.vendor_id = v.vendor_id
+        LEFT JOIN department_assessments da
+          ON va.assessment_id = da.assessment_id
+          AND da.department_role = ?
+        ORDER BY va.created_at DESC
+      `,
+      [departmentRole]
+    );
+
+    res.json(rows);
+  } catch (error) {
+    console.error("Fetch department assessments error:", error);
+    res.status(500).json({ message: "Failed to load department assessments." });
+  }
+});
+
+app.post("/department/assessments/:assessment_id/start", requireDepartment, async (req, res) => {
+  const assessmentId = req.params.assessment_id;
+  const departmentRole = req.session.user.role;
+
+  try {
+    const assessmentRows = await runQuery(
+      `
+        SELECT va.*, v.company_name, v.product_services_offered
+        FROM vendor_assessments va
+        JOIN vendors v ON va.vendor_id = v.vendor_id
+        WHERE va.assessment_id = ?
+      `,
+      [assessmentId]
+    );
+
+    if (assessmentRows.length === 0) {
+      return res.status(404).json({ message: "Vendor assessment not found." });
+    }
+
+    let departmentAssessment = await ensureDepartmentAssessment(assessmentId, departmentRole, "Draft");
+
+    if (departmentAssessment.status === "Pending") {
+      await runQuery(
+        `
+          UPDATE department_assessments
+          SET status = 'Draft', submitted_by_user_id = ?
+          WHERE department_assessment_id = ?
+        `,
+        [req.session.user.user_id, departmentAssessment.department_assessment_id]
+      );
+
+      departmentAssessment = {
+        ...departmentAssessment,
+        status: "Draft",
+        submitted_by_user_id: req.session.user.user_id
+      };
+    }
+
+    res.json({
+      assessment: assessmentRows[0],
+      department_assessment: departmentAssessment,
+      questions: flattenQuestionsForRole(departmentRole)
+    });
+  } catch (error) {
+    console.error("Start department assessment error:", error);
+    res.status(500).json({ message: "Failed to start department assessment." });
+  }
+});
+
+app.get("/department/assessments/:assessment_id", requireDepartment, async (req, res) => {
+  const assessmentId = req.params.assessment_id;
+  const departmentRole = req.session.user.role;
+
+  try {
+    const assessmentRows = await runQuery(
+      `
+        SELECT
+          va.*,
+          v.company_name,
+          v.product_services_offered,
+          v.contact_person_name,
+          v.contact_email
+        FROM vendor_assessments va
+        JOIN vendors v ON va.vendor_id = v.vendor_id
+        WHERE va.assessment_id = ?
+      `,
+      [assessmentId]
+    );
+
+    if (assessmentRows.length === 0) {
+      return res.status(404).json({ message: "Vendor assessment not found." });
+    }
+
+    const departmentAssessment = await ensureDepartmentAssessment(assessmentId, departmentRole, "Pending");
+
+    const answers = await runQuery(
+      `
+        SELECT *
+        FROM department_answers
+        WHERE department_assessment_id = ?
+        ORDER BY question_index
+      `,
+      [departmentAssessment.department_assessment_id]
+    );
+
+    res.json({
+      assessment: assessmentRows[0],
+      department_assessment: departmentAssessment,
+      answers,
+      questions: flattenQuestionsForRole(departmentRole)
+    });
+  } catch (error) {
+    console.error("Fetch department assessment error:", error);
+    res.status(500).json({ message: "Failed to load department assessment." });
+  }
+});
+
+app.post("/department/assessments/:assessment_id/submit", requireDepartment, upload.any(), async (req, res) => {
+  const assessmentId = req.params.assessment_id;
+  const departmentRole = req.session.user.role;
+
+  let answers;
+
+  try {
+    answers = JSON.parse(req.body.answers || "[]");
+  } catch (_error) {
+    return res.status(400).json({ message: "Invalid answer data." });
+  }
+
+  if (!Array.isArray(answers) || answers.length === 0) {
+    return res.status(400).json({ message: "No answers submitted." });
+  }
+
+  const questions = flattenQuestionsForRole(departmentRole);
+  const filesByQuestion = {};
+
+  (req.files || []).forEach((file) => {
+    const match = file.fieldname.match(/^artifact_(\d+)$/);
+    if (match) {
+      filesByQuestion[Number(match[1])] = file;
+    }
+  });
+
+  for (const answer of answers) {
+    if (!["Yes", "No", "N/A"].includes(answer.response)) {
+      return res.status(400).json({ message: "Each question must have a valid response." });
+    }
+
+    if ((answer.response === "No" || answer.response === "N/A") && !String(answer.explanation || "").trim()) {
+      return res.status(400).json({ message: "No and N/A responses require an explanation." });
+    }
+
+    if (answer.response === "Yes" && !filesByQuestion[answer.question_index] && !answer.existing_artifact_path) {
+      return res.status(400).json({ message: "Yes responses require an artifact or uploaded file." });
+    }
+  }
+
+  try {
+    const assessmentRows = await runQuery("SELECT * FROM vendor_assessments WHERE assessment_id = ?", [assessmentId]);
+
+    if (assessmentRows.length === 0) {
+      return res.status(404).json({ message: "Vendor assessment not found." });
+    }
+
+    let departmentAssessment = await ensureDepartmentAssessment(assessmentId, departmentRole, "Draft");
+
+    const values = answers.map((answer) => {
+      const file = filesByQuestion[answer.question_index];
+      const matchedQuestion = questions.find((question) => Number(question.question_index) === Number(answer.question_index));
+
+      return [
+        departmentAssessment.department_assessment_id,
+        matchedQuestion?.section_name || answer.section_name || roleLabels[departmentRole] || departmentRole,
+        answer.question_index,
+        matchedQuestion?.question_text || answer.question_text || "",
+        answer.response,
+        answer.explanation || null,
+        file ? `/uploads/${file.filename}` : answer.existing_artifact_path || null,
+        file ? file.originalname : answer.existing_artifact_name || null
+      ];
+    });
+
+    await runQuery(
+      `
+        INSERT INTO department_answers
+        (department_assessment_id, section_name, question_index, question_text, response, explanation, artifact_path, artifact_name)
+        VALUES ?
+        ON DUPLICATE KEY UPDATE
+          section_name = VALUES(section_name),
+          question_text = VALUES(question_text),
+          response = VALUES(response),
+          explanation = VALUES(explanation),
+          artifact_path = VALUES(artifact_path),
+          artifact_name = VALUES(artifact_name),
+          updated_at = CURRENT_TIMESTAMP
+      `,
+      [values]
+    );
+
+    await runQuery(
+      `
+        UPDATE department_assessments
+        SET status = 'Pending Admin Approval',
+            submitted_by_user_id = ?,
+            submitted_at = CURRENT_TIMESTAMP
+        WHERE department_assessment_id = ?
+      `,
+      [req.session.user.user_id, departmentAssessment.department_assessment_id]
+    );
+
+    await runQuery(
+      `
+        UPDATE department_reviews
+        SET review_status = 'Reviewed',
+            reviewer_user_id = ?,
+            comments = ?,
+            reviewed_at = CURRENT_TIMESTAMP
+        WHERE vendor_id = ?
+        AND department_role = ?
+      `,
+      [
+        req.session.user.user_id,
+        `${roleLabels[departmentRole] || departmentRole} form submitted to Admin.`,
+        assessmentRows[0].vendor_id,
+        departmentRole
+      ]
+    );
+
+    await updateMainAssessmentStatus(assessmentId);
+
+    res.json({ message: `${roleLabels[departmentRole] || departmentRole} assessment submitted to Admin for approval.` });
+  } catch (error) {
+    console.error("Submit department assessment error:", error);
+    res.status(500).json({ message: "Failed to submit department assessment." });
+  }
+});
+
+app.get("/department/pending-approval", requireDepartment, async (req, res) => {
+  try {
+    const rows = await runQuery(
+      `
+        SELECT
+          da.department_assessment_id,
+          da.assessment_id,
+          da.department_role,
+          da.status AS department_status,
+          da.submitted_at,
+          va.assessment_code,
+          va.purpose,
+          va.assessment_date,
+          va.overall_status,
+          v.company_name,
+          v.product_services_offered
+        FROM department_assessments da
+        JOIN vendor_assessments va ON da.assessment_id = va.assessment_id
+        JOIN vendors v ON va.vendor_id = v.vendor_id
+        WHERE da.status = 'Pending Admin Approval'
+        ORDER BY da.submitted_at DESC
+      `
+    );
+
+    res.json(rows);
+  } catch (error) {
+    console.error("Fetch pending department approvals error:", error);
+    res.status(500).json({ message: "Failed to load pending approvals." });
+  }
+});
+
+app.post("/department/signoff", requireDepartment, upload.single("signature"), async (req, res) => {
+  const { signer_name, signoff_status, assessment_id, department_assessment_id } = req.body;
+
+  if (!signer_name) {
+    return res.status(400).json({ message: "Signer name is required." });
+  }
+
+  const roleName = roleLabels[req.session.user.role] || req.session.user.role;
+  const status = signoff_status === "Signed" ? "Signed" : "Pending";
+  const fileName = req.file ? req.file.originalname : null;
+  const filePath = req.file ? `/uploads/${req.file.filename}` : null;
+
+  try {
+    await runQuery(
+      `
+        INSERT INTO sign_offs
+        (assessment_id, department_assessment_id, role_name, signer_name, signoff_status, signature_file_name, signature_file_path, signed_at, created_by_user_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      [
+        assessment_id || null,
+        department_assessment_id || null,
+        roleName,
+        signer_name,
+        status,
+        fileName,
+        filePath,
+        status === "Signed" ? new Date() : null,
+        req.session.user.user_id
+      ]
+    );
+
+    res.json({ message: "Sign-off saved." });
+  } catch (error) {
+    console.error("Save signoff error:", error);
+    res.status(500).json({ message: "Failed to save sign-off." });
+  }
+});
+
+/* LEGACY DEPARTMENT REVIEW ROUTES */
+
+app.get("/department/vendors", requireDepartment, async (req, res) => {
+  const departmentRole = req.session.user.role;
+
+  try {
+    const rows = await runQuery(
+      `
+        SELECT
+          v.vendor_id,
+          v.company_name,
+          v.company_website,
+          v.product_services_offered,
+          v.contact_person_name,
+          v.contact_email,
+          v.contact_phone,
+          v.overall_status,
+          v.created_at,
+          u.full_name AS submitted_by,
+          dr.review_status,
+          dr.comments,
+          dr.reviewed_at
+        FROM department_reviews dr
+        JOIN vendors v ON dr.vendor_id = v.vendor_id
+        LEFT JOIN users u ON v.created_by_user_id = u.user_id
+        WHERE dr.department_role = ?
+        ORDER BY v.created_at DESC
+      `,
+      [departmentRole]
+    );
+
+    res.json(rows);
+  } catch (error) {
+    console.error("Fetch department vendors error:", error);
+    res.status(500).json({ message: "Failed to load department vendors." });
+  }
+});
+
+app.patch("/department/reviews/:vendor_id", requireDepartment, async (req, res) => {
   const vendorId = req.params.vendor_id;
   const departmentRole = req.session.user.role;
   const reviewerUserId = req.session.user.user_id;
   const { review_status, comments } = req.body;
-
   const validStatuses = ["Pending", "Reviewed", "Rejected", "Approved"];
 
   if (!validStatuses.includes(review_status)) {
     return res.status(400).json({ message: "Invalid review status." });
   }
 
-  const sql = `
-    INSERT INTO department_reviews
-    (
-      vendor_id,
-      department_role,
-      reviewer_user_id,
-      review_status,
-      comments,
-      reviewed_at
-    )
-    VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-    ON DUPLICATE KEY UPDATE
-      reviewer_user_id = VALUES(reviewer_user_id),
-      review_status = VALUES(review_status),
-      comments = VALUES(comments),
-      reviewed_at = CURRENT_TIMESTAMP
-  `;
-
-  db.query(
-    sql,
-    [vendorId, departmentRole, reviewerUserId, review_status, comments || null],
-    (err) => {
-      if (err) {
-        console.error("Save department review error:", err);
-        return res.status(500).json({ message: "Failed to save department review." });
-      }
-
-      updateVendorOverallStatus(vendorId, () => {
-        res.json({ message: "Department review saved." });
-      });
-    }
-  );
-});
-
-function updateVendorOverallStatus(vendorId, callback) {
-  const sql = `
-    SELECT review_status
-    FROM department_reviews
-    WHERE vendor_id = ?
-  `;
-
-  db.query(sql, [vendorId], (err, rows) => {
-    if (err) {
-      console.error("Read department statuses error:", err);
-      return callback();
-    }
-
-    let overallStatus = "In Review";
-
-    if (rows.some((row) => row.review_status === "Rejected")) {
-      overallStatus = "Rejected";
-    } else if (
-      rows.length >= departmentRoles.length &&
-      rows.every((row) => row.review_status === "Reviewed" || row.review_status === "Approved")
-    ) {
-      overallStatus = "Completed";
-    } else if (rows.every((row) => row.review_status === "Pending")) {
-      overallStatus = "Pending";
-    }
-
-    const updateSql = `
-      UPDATE vendors
-      SET overall_status = ?
-      WHERE vendor_id = ?
-    `;
-
-    db.query(updateSql, [overallStatus, vendorId], () => callback());
-  });
-}
-
-
-/* DEPARTMENT ASSESSMENT ROUTES */
-
-app.get("/department/questions", requireAnyRole(departmentRoles), (req, res) => {
-  res.json(getDepartmentQuestions(req.session.user.role));
-});
-
-app.get("/department/queue", requireAnyRole(departmentRoles), (req, res) => {
-  const departmentRole = req.session.user.role;
-
-  const sql = `
-    SELECT
-      v.vendor_id,
-      v.company_name,
-      v.product_services_offered,
-      v.contact_person_name,
-      v.contact_email,
-      v.created_at,
-      u.full_name AS submitted_by,
-      dr.review_status,
-      (
-        SELECT da.assessment_code
-        FROM department_assessments da
-        WHERE da.vendor_id = v.vendor_id
-        AND da.department_role = ?
-        ORDER BY da.assessment_id DESC
-        LIMIT 1
-      ) AS latest_assessment_code,
-      (
-        SELECT da.status
-        FROM department_assessments da
-        WHERE da.vendor_id = v.vendor_id
-        AND da.department_role = ?
-        ORDER BY da.assessment_id DESC
-        LIMIT 1
-      ) AS latest_assessment_status
-    FROM department_reviews dr
-    JOIN vendors v ON dr.vendor_id = v.vendor_id
-    LEFT JOIN users u ON v.created_by_user_id = u.user_id
-    WHERE dr.department_role = ?
-    ORDER BY v.created_at DESC
-  `;
-
-  db.query(sql, [departmentRole, departmentRole, departmentRole], (err, rows) => {
-    if (err) {
-      console.error("Fetch department queue error:", err);
-      return res.status(500).json({ message: "Failed to load department queue." });
-    }
-
-    res.json(rows);
-  });
-});
-
-app.post("/department/assessments/start", requireAnyRole(departmentRoles), (req, res) => {
-  const departmentRole = req.session.user.role;
-  const { vendor_id, purpose, assessment_date, force_new } = req.body;
-
-  if (!vendor_id) {
-    return res.status(400).json({ message: "Vendor is required." });
-  }
-
-  function createNewAssessment() {
-    const insertSql = `
-      INSERT INTO department_assessments
-      (
-        department_role,
-        vendor_id,
-        submitted_by_user_id,
-        purpose,
-        assessment_date,
-        status
-      )
-      VALUES (?, ?, ?, ?, ?, 'Draft')
-    `;
-
-    db.query(
-      insertSql,
-      [
-        departmentRole,
-        vendor_id,
-        req.session.user.user_id,
-        purpose || defaultPurposes[departmentRole] || getRoleLabelForServer(departmentRole),
-        assessment_date || null
-      ],
-      (insertErr, result) => {
-        if (insertErr) {
-          console.error("Start department assessment error:", insertErr);
-          return res.status(500).json({ message: "Failed to start assessment." });
-        }
-
-        const assessmentId = result.insertId;
-        const prefix = assessmentPrefixes[departmentRole] || "DA";
-        const assessmentCode = `${prefix}-${String(assessmentId).padStart(3, "0")}`;
-
-        const updateSql = `
-          UPDATE department_assessments
-          SET assessment_code = ?
-          WHERE assessment_id = ?
-        `;
-
-        db.query(updateSql, [assessmentCode, assessmentId], (updateErr) => {
-          if (updateErr) {
-            console.error("Update department assessment code error:", updateErr);
-            return res.status(500).json({ message: "Failed to create assessment ID." });
-          }
-
-          res.json({
-            assessment_id: assessmentId,
-            assessment_code: assessmentCode,
-            department_role: departmentRole,
-            vendor_id,
-            submitted_by_user_id: req.session.user.user_id,
-            purpose: purpose || defaultPurposes[departmentRole] || getRoleLabelForServer(departmentRole),
-            assessment_date: assessment_date || null,
-            status: "Draft",
-            created_at: new Date().toISOString()
-          });
-        });
-      }
-    );
-  }
-
-  if (force_new) {
-    createNewAssessment();
-    return;
-  }
-
-  const findDraftSql = `
-    SELECT *
-    FROM department_assessments
-    WHERE vendor_id = ?
-    AND department_role = ?
-    AND status = 'Draft'
-    ORDER BY assessment_id DESC
-    LIMIT 1
-  `;
-
-  db.query(findDraftSql, [vendor_id, departmentRole], (findErr, drafts) => {
-    if (findErr) {
-      console.error("Find department draft error:", findErr);
-      return res.status(500).json({ message: "Failed to start assessment." });
-    }
-
-    if (drafts.length > 0) {
-      return res.json(drafts[0]);
-    }
-
-    createNewAssessment();
-  });
-});
-
-app.get("/department/assessments/mine", requireAnyRole(departmentRoles), (req, res) => {
-  const sql = `
-    SELECT
-      da.assessment_id,
-      da.assessment_code,
-      da.department_role,
-      da.vendor_id,
-      da.purpose,
-      da.assessment_date,
-      da.status,
-      da.submitted_at,
-      da.created_at,
-      da.admin_comment,
-      v.company_name,
-      v.product_services_offered,
-      u.full_name AS submitted_by
-    FROM department_assessments da
-    JOIN vendors v ON da.vendor_id = v.vendor_id
-    LEFT JOIN users u ON da.submitted_by_user_id = u.user_id
-    WHERE da.department_role IN ('it', 'infosec', 'management', 'dpo', 'hr', 'compliance')
-    ORDER BY da.created_at DESC
-  `;
-
-  db.query(sql, (err, rows) => {
-    if (err) {
-      console.error("Fetch department assessments error:", err);
-      return res.status(500).json({ message: "Failed to load submissions." });
-    }
-
-    res.json(rows);
-  });
-});
-
-app.get("/department/assessments/:assessment_id", requireAnyRole(departmentRoles), (req, res) => {
-  const { assessment_id } = req.params;
-
-  const sql = `
-    SELECT
-      da.*,
-      v.company_name,
-      v.product_services_offered
-    FROM department_assessments da
-    JOIN vendors v ON da.vendor_id = v.vendor_id
-    WHERE da.assessment_id = ?
-    AND da.department_role IN ('it', 'infosec', 'management', 'dpo', 'hr', 'compliance')
-  `;
-
-  db.query(sql, [assessment_id], (err, rows) => {
-    if (err) {
-      console.error("Fetch department assessment error:", err);
-      return res.status(500).json({ message: "Failed to load assessment." });
-    }
-
-    if (rows.length === 0) {
-      return res.status(404).json({ message: "Assessment not found." });
-    }
-
-    const assessment = rows[0];
-    const answersSql = `
-      SELECT *
-      FROM department_answers
-      WHERE assessment_id = ?
-      ORDER BY question_index
-    `;
-
-    db.query(answersSql, [assessment_id], (answerErr, answers) => {
-      if (answerErr) {
-        console.error("Fetch department answers error:", answerErr);
-        return res.status(500).json({ message: "Failed to load assessment answers." });
-      }
-
-      res.json({
-        assessment,
-        questions: getDepartmentQuestions(assessment.department_role),
-        answers
-      });
-    });
-  });
-});
-
-app.post("/department/assessments/:assessment_id/submit", requireAnyRole(departmentRoles), upload.any(), (req, res) => {
-  const departmentRole = req.session.user.role;
-  const { assessment_id } = req.params;
-
-  let answers;
-
   try {
-    answers = JSON.parse(req.body.answers || "[]");
-  } catch (error) {
-    return res.status(400).json({ message: "Invalid answer data." });
-  }
-
-  if (!Array.isArray(answers) || answers.length === 0) {
-    return res.status(400).json({ message: "No answers submitted." });
-  }
-
-  const filesByQuestion = {};
-
-  (req.files || []).forEach((file) => {
-    const match = file.fieldname.match(/^artifact_(\d+)$/);
-    if (match) {
-      filesByQuestion[Number(match[1])] = file;
-    }
-  });
-
-  for (const answer of answers) {
-    if (!["Yes", "No", "N/A"].includes(answer.response)) {
-      return res.status(400).json({ message: "Each question must have a valid response." });
-    }
-
-    if ((answer.response === "No" || answer.response === "N/A") && !String(answer.explanation || "").trim()) {
-      return res.status(400).json({
-        message: "No and N/A responses require an explanation."
-      });
-    }
-
-    if (answer.response === "Yes" && !filesByQuestion[answer.question_index] && !answer.existing_artifact_path) {
-      return res.status(400).json({
-        message: "Yes responses require an artifact or uploaded file."
-      });
-    }
-  }
-
-  const checkSql = `
-    SELECT *
-    FROM department_assessments
-    WHERE assessment_id = ?
-    AND department_role IN ('it', 'infosec', 'management', 'dpo', 'hr', 'compliance')
-  `;
-
-  db.query(checkSql, [assessment_id], (checkErr, rows) => {
-    if (checkErr) {
-      console.error("Check department assessment error:", checkErr);
-      return res.status(500).json({ message: "Failed to check assessment." });
-    }
-
-    if (rows.length === 0) {
-      return res.status(404).json({ message: "Assessment not found." });
-    }
-
-    const assessment = rows[0];
-    const assessmentRole = assessment.department_role || departmentRole;
-    const questions = getDepartmentQuestions(assessmentRole);
-
-    const values = answers.map((answer) => {
-      const file = filesByQuestion[answer.question_index];
-      const question = questions[answer.question_index] || {};
-
-      return [
-        assessment_id,
-        answer.question_index,
-        question.section_name || answer.section_name || getRoleLabelForServer(assessmentRole),
-        question.question_text || answer.question_text || "",
-        answer.response,
-        answer.explanation || null,
-        file ? `/uploads/${file.filename}` : answer.existing_artifact_path || null,
-        file ? file.originalname : answer.existing_artifact_name || null
-      ];
-    });
-
-    const saveSql = `
-      INSERT INTO department_answers
-      (
-        assessment_id,
-        question_index,
-        section_name,
-        question_text,
-        response,
-        explanation,
-        artifact_path,
-        artifact_name
-      )
-      VALUES ?
-      ON DUPLICATE KEY UPDATE
-        section_name = VALUES(section_name),
-        question_text = VALUES(question_text),
-        response = VALUES(response),
-        explanation = VALUES(explanation),
-        artifact_path = VALUES(artifact_path),
-        artifact_name = VALUES(artifact_name),
-        updated_at = CURRENT_TIMESTAMP
-    `;
-
-    db.query(saveSql, [values], (saveErr) => {
-      if (saveErr) {
-        console.error("Save department answers error:", saveErr);
-        return res.status(500).json({ message: "Failed to save assessment answers." });
-      }
-
-      const submitSql = `
-        UPDATE department_assessments
-        SET purpose = ?,
-            status = 'Pending Admin Approval',
-            submitted_at = CURRENT_TIMESTAMP
-        WHERE assessment_id = ?
-      `;
-
-      db.query(submitSql, [req.body.purpose || assessment.purpose || defaultPurposes[assessmentRole], assessment_id], (submitErr) => {
-        if (submitErr) {
-          console.error("Submit department assessment error:", submitErr);
-          return res.status(500).json({ message: "Failed to submit assessment." });
-        }
-
-        const reviewSql = `
-          UPDATE department_reviews
-          SET review_status = 'Reviewed',
-              reviewer_user_id = ?,
-              comments = ?,
-              reviewed_at = CURRENT_TIMESTAMP
-          WHERE vendor_id = ?
-          AND department_role = ?
-        `;
-
-        db.query(
-          reviewSql,
-          [
-            req.session.user.user_id,
-            `${getRoleLabelForServer(assessmentRole)} assessment ${assessment.assessment_code || assessment_id} submitted to Admin.`,
-            assessment.vendor_id,
-            assessmentRole
-          ],
-          () => {
-            updateVendorOverallStatus(assessment.vendor_id, () => {
-              res.json({ message: `${getRoleLabelForServer(assessmentRole)} assessment submitted to Admin for approval.` });
-            });
-          }
-        );
-      });
-    });
-  });
-});
-
-app.get("/department/pending-approval", requireAnyRole(departmentRoles), (req, res) => {
-  const sql = `
-    SELECT
-      da.assessment_id,
-      da.assessment_code,
-      da.department_role,
-      da.vendor_id,
-      da.purpose,
-      da.assessment_date,
-      da.status,
-      da.submitted_at,
-      da.admin_comment,
-      v.company_name,
-      v.product_services_offered,
-      u.full_name AS submitted_by
-    FROM department_assessments da
-    JOIN vendors v ON da.vendor_id = v.vendor_id
-    LEFT JOIN users u ON da.submitted_by_user_id = u.user_id
-    WHERE da.department_role IN ('it', 'infosec', 'management', 'dpo', 'hr', 'compliance')
-    AND da.status = 'Pending Admin Approval'
-    ORDER BY da.submitted_at DESC
-  `;
-
-  db.query(sql, (err, rows) => {
-    if (err) {
-      console.error("Fetch department pending approvals error:", err);
-      return res.status(500).json({ message: "Failed to load pending approvals." });
-    }
-
-    res.json(rows);
-  });
-});
-
-app.post("/department/signoff", requireAnyRole(departmentRoles), upload.single("signature"), (req, res) => {
-  const { role_name, signer_name, signoff_status, assessment_id } = req.body;
-
-  if (!role_name || !signer_name) {
-    return res.status(400).json({ message: "Role and signer name are required." });
-  }
-
-  const status = signoff_status === "Signed" ? "Signed" : "Pending";
-  const fileName = req.file ? req.file.originalname : null;
-  const filePath = req.file ? `/uploads/${req.file.filename}` : null;
-
-  const sql = `
-    INSERT INTO sign_offs
-    (
-      assessment_id,
-      role_name,
-      signer_name,
-      signoff_status,
-      signature_file_name,
-      signature_file_path,
-      signed_at,
-      created_by_user_id
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `;
-
-  db.query(
-    sql,
-    [
-      assessment_id || null,
-      role_name,
-      signer_name,
-      status,
-      fileName,
-      filePath,
-      status === "Signed" ? new Date() : null,
-      req.session.user.user_id
-    ],
-    (err) => {
-      if (err) {
-        console.error("Save department signoff error:", err);
-        return res.status(500).json({ message: "Failed to save sign-off." });
-      }
-
-      res.json({ message: "Sign-off saved." });
-    }
-  );
-});
-
-/* INFOSEC ROUTES */
-
-app.get("/infosec/questions", requireRole("infosec"), (req, res) => {
-  res.json(infoSecQuestions.map((question, index) => ({
-    question_index: index,
-    question_text: question
-  })));
-});
-
-app.get("/infosec/queue", requireRole("infosec"), (req, res) => {
-  const sql = `
-    SELECT
-      v.vendor_id,
-      v.company_name,
-      v.product_services_offered,
-      v.contact_person_name,
-      v.contact_email,
-      v.created_at,
-      u.full_name AS submitted_by,
-      dr.review_status,
-      (
-        SELECT ia.assessment_code
-        FROM infosec_assessments ia
-        WHERE ia.vendor_id = v.vendor_id
-        ORDER BY ia.assessment_id DESC
-        LIMIT 1
-      ) AS latest_assessment_code,
-      (
-        SELECT ia.status
-        FROM infosec_assessments ia
-        WHERE ia.vendor_id = v.vendor_id
-        ORDER BY ia.assessment_id DESC
-        LIMIT 1
-      ) AS latest_assessment_status
-    FROM department_reviews dr
-    JOIN vendors v ON dr.vendor_id = v.vendor_id
-    LEFT JOIN users u ON v.created_by_user_id = u.user_id
-    WHERE dr.department_role = 'infosec'
-    ORDER BY v.created_at DESC
-  `;
-
-  db.query(sql, (err, rows) => {
-    if (err) {
-      console.error("Fetch infosec queue error:", err);
-      return res.status(500).json({ message: "Failed to load InfoSec queue." });
-    }
-
-    res.json(rows);
-  });
-});
-
-app.post("/infosec/assessments/start", requireRole("infosec"), (req, res) => {
-  const { vendor_id, purpose, assessment_date, force_new } = req.body;
-
-  if (!vendor_id) {
-    return res.status(400).json({ message: "Vendor is required." });
-  }
-
-  function createNewAssessment() {
-    const insertSql = `
-      INSERT INTO infosec_assessments
-      (
-        vendor_id,
-        submitted_by_user_id,
-        purpose,
-        assessment_date,
-        status
-      )
-      VALUES (?, ?, ?, ?, 'Draft')
-    `;
-
-    db.query(
-      insertSql,
-      [
-        vendor_id,
-        req.session.user.user_id,
-        purpose || "Accreditation",
-        assessment_date || null
-      ],
-      (insertErr, result) => {
-        if (insertErr) {
-          console.error("Start assessment error:", insertErr);
-          return res.status(500).json({ message: "Failed to start assessment." });
-        }
-
-        const assessmentId = result.insertId;
-        const assessmentCode = `IA-${String(assessmentId).padStart(3, "0")}`;
-
-        const updateSql = `
-          UPDATE infosec_assessments
-          SET assessment_code = ?
-          WHERE assessment_id = ?
-        `;
-
-        db.query(updateSql, [assessmentCode, assessmentId], (updateErr) => {
-          if (updateErr) {
-            console.error("Update assessment code error:", updateErr);
-            return res.status(500).json({ message: "Failed to create assessment ID." });
-          }
-
-          res.json({
-            assessment_id: assessmentId,
-            assessment_code: assessmentCode,
-            vendor_id,
-            submitted_by_user_id: req.session.user.user_id,
-            purpose: purpose || "Accreditation",
-            assessment_date: assessment_date || null,
-            status: "Draft",
-            created_at: new Date().toISOString()
-          });
-        });
-      }
+    await runQuery(
+      `
+        INSERT INTO department_reviews
+        (vendor_id, department_role, reviewer_user_id, review_status, comments, reviewed_at)
+        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ON DUPLICATE KEY UPDATE
+          reviewer_user_id = VALUES(reviewer_user_id),
+          review_status = VALUES(review_status),
+          comments = VALUES(comments),
+          reviewed_at = CURRENT_TIMESTAMP
+      `,
+      [vendorId, departmentRole, reviewerUserId, review_status, comments || null]
     );
-  }
 
-  if (force_new) {
-    createNewAssessment();
-    return;
-  }
-
-  const findDraftSql = `
-    SELECT *
-    FROM infosec_assessments
-    WHERE vendor_id = ?
-    AND submitted_by_user_id = ?
-    AND status = 'Draft'
-    ORDER BY assessment_id DESC
-    LIMIT 1
-  `;
-
-  db.query(findDraftSql, [vendor_id, req.session.user.user_id], (findErr, drafts) => {
-    if (findErr) {
-      console.error("Find draft error:", findErr);
-      return res.status(500).json({ message: "Failed to start assessment." });
-    }
-
-    if (drafts.length > 0) {
-      return res.json(drafts[0]);
-    }
-
-    createNewAssessment();
-  });
-});
-
-app.get("/infosec/assessments/mine", requireRole("infosec"), (req, res) => {
-  const sql = `
-    SELECT
-      ia.assessment_id,
-      ia.assessment_code,
-      ia.vendor_id,
-      ia.purpose,
-      ia.assessment_date,
-      ia.status,
-      ia.submitted_at,
-      ia.created_at,
-      ia.admin_comment,
-      v.company_name,
-      v.product_services_offered
-    FROM infosec_assessments ia
-    JOIN vendors v ON ia.vendor_id = v.vendor_id
-    WHERE ia.submitted_by_user_id = ?
-    ORDER BY ia.created_at DESC
-  `;
-
-  db.query(sql, [req.session.user.user_id], (err, rows) => {
-    if (err) {
-      console.error("Fetch my infosec assessments error:", err);
-      return res.status(500).json({ message: "Failed to load InfoSec submissions." });
-    }
-
-    res.json(rows);
-  });
-});
-
-app.get("/infosec/assessments/:assessment_id", requireRole("infosec"), (req, res) => {
-  const { assessment_id } = req.params;
-
-  const sql = `
-    SELECT
-      ia.*,
-      v.company_name,
-      v.product_services_offered
-    FROM infosec_assessments ia
-    JOIN vendors v ON ia.vendor_id = v.vendor_id
-    WHERE ia.assessment_id = ?
-    AND ia.submitted_by_user_id = ?
-  `;
-
-  db.query(sql, [assessment_id, req.session.user.user_id], (err, rows) => {
-    if (err) {
-      console.error("Fetch assessment error:", err);
-      return res.status(500).json({ message: "Failed to load assessment." });
-    }
-
-    if (rows.length === 0) {
-      return res.status(404).json({ message: "Assessment not found." });
-    }
-
-    const answersSql = `
-      SELECT *
-      FROM infosec_answers
-      WHERE assessment_id = ?
-      ORDER BY question_index
-    `;
-
-    db.query(answersSql, [assessment_id], (answerErr, answers) => {
-      if (answerErr) {
-        console.error("Fetch answers error:", answerErr);
-        return res.status(500).json({ message: "Failed to load assessment answers." });
-      }
-
-      res.json({
-        assessment: rows[0],
-        answers
-      });
-    });
-  });
-});
-
-app.post("/infosec/assessments/:assessment_id/submit", requireRole("infosec"), upload.any(), (req, res) => {
-  const { assessment_id } = req.params;
-
-  let answers;
-
-  try {
-    answers = JSON.parse(req.body.answers || "[]");
+    res.json({ message: "Department review saved." });
   } catch (error) {
-    return res.status(400).json({ message: "Invalid answer data." });
+    console.error("Save department review error:", error);
+    res.status(500).json({ message: "Failed to save department review." });
   }
-
-  if (!Array.isArray(answers) || answers.length === 0) {
-    return res.status(400).json({ message: "No answers submitted." });
-  }
-
-  const filesByQuestion = {};
-
-  (req.files || []).forEach((file) => {
-    const match = file.fieldname.match(/^artifact_(\d+)$/);
-    if (match) {
-      filesByQuestion[Number(match[1])] = file;
-    }
-  });
-
-  for (const answer of answers) {
-    if (!["Yes", "No", "N/A"].includes(answer.response)) {
-      return res.status(400).json({ message: "Each question must have a valid response." });
-    }
-
-    if ((answer.response === "No" || answer.response === "N/A") && !String(answer.explanation || "").trim()) {
-      return res.status(400).json({
-        message: "No and N/A responses require an explanation."
-      });
-    }
-
-    if (answer.response === "Yes" && !filesByQuestion[answer.question_index] && !answer.existing_artifact_path) {
-      return res.status(400).json({
-        message: "Yes responses require an artifact or uploaded file."
-      });
-    }
-  }
-
-  const checkSql = `
-    SELECT *
-    FROM infosec_assessments
-    WHERE assessment_id = ?
-    AND submitted_by_user_id = ?
-  `;
-
-  db.query(checkSql, [assessment_id, req.session.user.user_id], (checkErr, rows) => {
-    if (checkErr) {
-      console.error("Check infosec assessment error:", checkErr);
-      return res.status(500).json({ message: "Failed to check assessment." });
-    }
-
-    if (rows.length === 0) {
-      return res.status(404).json({ message: "Assessment not found." });
-    }
-
-    const assessment = rows[0];
-
-    const values = answers.map((answer) => {
-      const file = filesByQuestion[answer.question_index];
-
-      return [
-        assessment_id,
-        answer.question_index,
-        infoSecQuestions[answer.question_index] || answer.question_text || "",
-        answer.response,
-        answer.explanation || null,
-        file ? `/uploads/${file.filename}` : answer.existing_artifact_path || null,
-        file ? file.originalname : answer.existing_artifact_name || null
-      ];
-    });
-
-    const saveSql = `
-      INSERT INTO infosec_answers
-      (
-        assessment_id,
-        question_index,
-        question_text,
-        response,
-        explanation,
-        artifact_path,
-        artifact_name
-      )
-      VALUES ?
-      ON DUPLICATE KEY UPDATE
-        question_text = VALUES(question_text),
-        response = VALUES(response),
-        explanation = VALUES(explanation),
-        artifact_path = VALUES(artifact_path),
-        artifact_name = VALUES(artifact_name),
-        updated_at = CURRENT_TIMESTAMP
-    `;
-
-    db.query(saveSql, [values], (saveErr) => {
-      if (saveErr) {
-        console.error("Save infosec answers error:", saveErr);
-        return res.status(500).json({ message: "Failed to save InfoSec answers." });
-      }
-
-      const submitSql = `
-        UPDATE infosec_assessments
-        SET status = 'Pending Admin Approval',
-            submitted_at = CURRENT_TIMESTAMP
-        WHERE assessment_id = ?
-      `;
-
-      db.query(submitSql, [assessment_id], (submitErr) => {
-        if (submitErr) {
-          console.error("Submit infosec assessment error:", submitErr);
-          return res.status(500).json({ message: "Failed to submit InfoSec assessment." });
-        }
-
-        const reviewSql = `
-          UPDATE department_reviews
-          SET review_status = 'Reviewed',
-              reviewer_user_id = ?,
-              comments = ?,
-              reviewed_at = CURRENT_TIMESTAMP
-          WHERE vendor_id = ?
-          AND department_role = 'infosec'
-        `;
-
-        db.query(
-          reviewSql,
-          [
-            req.session.user.user_id,
-            `InfoSec assessment ${assessment.assessment_code || assessment_id} submitted to Admin.`,
-            assessment.vendor_id
-          ],
-          () => {
-            updateVendorOverallStatus(assessment.vendor_id, () => {
-              res.json({ message: "InfoSec assessment submitted to Admin for approval." });
-            });
-          }
-        );
-      });
-    });
-  });
-});
-
-app.get("/infosec/pending-approval", requireRole("infosec"), (req, res) => {
-  const sql = `
-    SELECT
-      ia.assessment_id,
-      ia.assessment_code,
-      ia.vendor_id,
-      ia.purpose,
-      ia.assessment_date,
-      ia.status,
-      ia.submitted_at,
-      ia.admin_comment,
-      v.company_name,
-      v.product_services_offered
-    FROM infosec_assessments ia
-    JOIN vendors v ON ia.vendor_id = v.vendor_id
-    WHERE ia.submitted_by_user_id = ?
-    AND ia.status = 'Pending Admin Approval'
-    ORDER BY ia.submitted_at DESC
-  `;
-
-  db.query(sql, [req.session.user.user_id], (err, rows) => {
-    if (err) {
-      console.error("Fetch pending approvals error:", err);
-      return res.status(500).json({ message: "Failed to load pending approvals." });
-    }
-
-    res.json(rows);
-  });
-});
-
-app.post("/infosec/signoff", requireRole("infosec"), upload.single("signature"), (req, res) => {
-  const { role_name, signer_name, signoff_status, assessment_id } = req.body;
-
-  if (!role_name || !signer_name) {
-    return res.status(400).json({ message: "Role and signer name are required." });
-  }
-
-  const status = signoff_status === "Signed" ? "Signed" : "Pending";
-  const fileName = req.file ? req.file.originalname : null;
-  const filePath = req.file ? `/uploads/${req.file.filename}` : null;
-
-  const sql = `
-    INSERT INTO sign_offs
-    (
-      assessment_id,
-      role_name,
-      signer_name,
-      signoff_status,
-      signature_file_name,
-      signature_file_path,
-      signed_at,
-      created_by_user_id
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `;
-
-  db.query(
-    sql,
-    [
-      assessment_id || null,
-      role_name,
-      signer_name,
-      status,
-      fileName,
-      filePath,
-      status === "Signed" ? new Date() : null,
-      req.session.user.user_id
-    ],
-    (err) => {
-      if (err) {
-        console.error("Save signoff error:", err);
-        return res.status(500).json({ message: "Failed to save sign-off." });
-      }
-
-      res.json({ message: "Sign-off saved." });
-    }
-  );
 });
 
 /* ADMIN ROUTES */
 
-app.get("/admin/vendors", requireRole("admin"), (req, res) => {
-  const sql = `
-    SELECT
-      v.vendor_id,
-      v.company_name,
-      v.company_website,
-      v.product_services_offered,
-      v.contact_person_name,
-      v.contact_email,
-      v.contact_phone,
-      v.overall_status,
-      v.created_at,
-      u.full_name AS submitted_by,
-      SUM(CASE WHEN dr.review_status = 'Pending' THEN 1 ELSE 0 END) AS pending_reviews,
-      MAX(CASE WHEN dr.department_role = 'it' THEN dr.review_status END) AS it_status,
-      MAX(CASE WHEN dr.department_role = 'infosec' THEN dr.review_status END) AS infosec_status,
-      MAX(CASE WHEN dr.department_role = 'management' THEN dr.review_status END) AS management_status,
-      MAX(CASE WHEN dr.department_role = 'dpo' THEN dr.review_status END) AS dpo_status,
-      MAX(CASE WHEN dr.department_role = 'hr' THEN dr.review_status END) AS hr_status,
-      MAX(CASE WHEN dr.department_role = 'compliance' THEN dr.review_status END) AS compliance_status
-    FROM vendors v
-    LEFT JOIN users u ON v.created_by_user_id = u.user_id
-    LEFT JOIN department_reviews dr ON v.vendor_id = dr.vendor_id
-    GROUP BY
-      v.vendor_id,
-      v.company_name,
-      v.company_website,
-      v.product_services_offered,
-      v.contact_person_name,
-      v.contact_email,
-      v.contact_phone,
-      v.overall_status,
-      v.created_at,
-      u.full_name
-    ORDER BY v.created_at DESC
-  `;
-
-  db.query(sql, (err, rows) => {
-    if (err) {
-      console.error("Fetch admin vendors error:", err);
-      return res.status(500).json({ message: "Failed to load admin vendors." });
-    }
-
-    res.json(rows);
-  });
-});
-
-app.get("/admin/infosec-assessments", requireRole("admin"), (req, res) => {
-  const sql = `
-    SELECT
-      ia.*,
-      v.company_name,
-      u.full_name AS submitted_by
-    FROM infosec_assessments ia
-    JOIN vendors v ON ia.vendor_id = v.vendor_id
-    JOIN users u ON ia.submitted_by_user_id = u.user_id
-    ORDER BY ia.submitted_at DESC, ia.created_at DESC
-  `;
-
-  db.query(sql, (err, rows) => {
-    if (err) {
-      console.error("Fetch admin infosec assessments error:", err);
-      return res.status(500).json({ message: "Failed to load InfoSec assessments." });
-    }
+app.get("/admin/vendors", requireRole("admin"), async (_req, res) => {
+  try {
+    const rows = await runQuery(
+      `
+        SELECT
+          v.vendor_id,
+          v.company_name,
+          v.company_website,
+          v.product_services_offered,
+          v.contact_person_name,
+          v.contact_email,
+          v.contact_phone,
+          v.overall_status,
+          v.created_at,
+          u.full_name AS submitted_by,
+          COUNT(DISTINCT va.assessment_id) AS assessment_count,
+          SUM(CASE WHEN dr.review_status = 'Pending' THEN 1 ELSE 0 END) AS pending_reviews,
+          MAX(CASE WHEN dr.department_role = 'it' THEN dr.review_status END) AS it_status,
+          MAX(CASE WHEN dr.department_role = 'infosec' THEN dr.review_status END) AS infosec_status,
+          MAX(CASE WHEN dr.department_role = 'management' THEN dr.review_status END) AS management_status,
+          MAX(CASE WHEN dr.department_role = 'dpo' THEN dr.review_status END) AS dpo_status,
+          MAX(CASE WHEN dr.department_role = 'hr' THEN dr.review_status END) AS hr_status,
+          MAX(CASE WHEN dr.department_role = 'compliance' THEN dr.review_status END) AS compliance_status
+        FROM vendors v
+        LEFT JOIN users u ON v.created_by_user_id = u.user_id
+        LEFT JOIN department_reviews dr ON v.vendor_id = dr.vendor_id
+        LEFT JOIN vendor_assessments va ON v.vendor_id = va.vendor_id
+        GROUP BY
+          v.vendor_id,
+          v.company_name,
+          v.company_website,
+          v.product_services_offered,
+          v.contact_person_name,
+          v.contact_email,
+          v.contact_phone,
+          v.overall_status,
+          v.created_at,
+          u.full_name
+        ORDER BY v.created_at DESC
+      `
+    );
 
     res.json(rows);
-  });
+  } catch (error) {
+    console.error("Fetch admin vendors error:", error);
+    res.status(500).json({ message: "Failed to load admin vendors." });
+  }
 });
 
-/* START SERVER */
+app.get("/admin/department-assessments", requireRole("admin"), async (_req, res) => {
+  try {
+    const rows = await runQuery(
+      `
+        SELECT
+          da.*,
+          va.assessment_code,
+          va.purpose,
+          va.assessment_date,
+          va.overall_status,
+          v.company_name,
+          u.full_name AS submitted_by
+        FROM department_assessments da
+        JOIN vendor_assessments va ON da.assessment_id = va.assessment_id
+        JOIN vendors v ON va.vendor_id = v.vendor_id
+        LEFT JOIN users u ON da.submitted_by_user_id = u.user_id
+        ORDER BY da.submitted_at DESC, da.created_at DESC
+      `
+    );
+
+    res.json(rows);
+  } catch (error) {
+    console.error("Fetch admin department assessments error:", error);
+    res.status(500).json({ message: "Failed to load department assessments." });
+  }
+});
 
 const PORT = process.env.PORT || 3000;
 

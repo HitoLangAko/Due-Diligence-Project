@@ -47,7 +47,7 @@
             <span>Vendor Queue</span>
           </button>
 
-          <button class="nav-link hidden" data-page="vendor-assessment" data-roles="it,infosec,management,dpo,hr,compliance" type="button" id="vendorAssessmentNavBtn">
+          <button class="nav-link" data-page="vendor-assessment" data-roles="employee,it,infosec,management,dpo,hr,compliance" type="button" id="vendorAssessmentNavBtn">
             <i class="fa-solid fa-clipboard-check"></i>
             <span>Vendor Assessment</span>
           </button>
@@ -62,7 +62,7 @@
             <span>Sign off</span>
           </button>
 
-          <button class="nav-link" data-page="department-assessments" data-roles="__none__" type="button">
+          <button class="nav-link" data-page="department-assessments" data-roles="legacy-hidden" type="button">
             <i class="fa-solid fa-clipboard-check"></i>
             <span>Vendor Assessments</span>
           </button>
@@ -229,7 +229,7 @@
             </p>
 
             <p class="vendor-success-message">
-              Draft saved and forwarded to IT, InfoSec, Management, DPO, HR, and Compliance for assessment.
+              Vendor saved. Create a Vendor Assessment to assign it to IT, InfoSec, Management, DPO, HR, and Compliance.
             </p>
 
             <button type="button" class="small-action-btn" id="submitAnotherVendorBtn">Submit Another</button>
@@ -319,7 +319,7 @@
                 <tr>
                   <th>ID</th>
                   <th>Vendor</th>
-                  <th>Type</th>
+                  <th>Department</th>
                   <th>Submitted By</th>
                   <th>Status</th>
                   <th>Actions</th>
@@ -336,7 +336,7 @@
 
         <section class="page" id="vendorAssessmentPage">
         <div class="content-card vendor-assessment-card">
-          <h3 id="departmentAssessmentHeading">Information Security Assessment</h3>
+          <h3>Vendor Assessment</h3>
 
           <div class="assessment-meta-grid">
             <div class="field-group">
@@ -359,9 +359,9 @@
             </div>
 
             <div class="field-group">
-              <label>Select Vendor</label>
+              <label>Select Vendor / Assessment</label>
               <select id="infosecVendorSelect" required>
-                <option value="">Select Vendor</option>
+                <option value="">Select Vendor / Assessment</option>
               </select>
             </div>
 
@@ -414,7 +414,7 @@
               </button>
 
               <button type="submit" class="submit-draft-btn">
-                Submit to Admin
+                Submit Department Form to Admin
                 <i class="fa-solid fa-arrow-right"></i>
               </button>
             </div>
@@ -432,7 +432,7 @@
                 <tr>
                   <th>Assessment ID</th>
                   <th>Vendor</th>
-                  <th>Type</th>
+                  <th>Department</th>
                   <th>Status</th>
                   <th>Date Submitted</th>
                 </tr>
@@ -458,12 +458,7 @@
               <label>Department / Role</label>
               <select id="signoffRole" required>
                 <option value="">Select Role</option>
-                <option value="IT">IT</option>
-                <option value="InfoSec">InfoSec</option>
-                <option value="Management">Management</option>
-                <option value="DPO">DPO</option>
-                <option value="HR">HR</option>
-                <option value="Compliance">Compliance</option>
+                <option value="">Select Role</option>
               </select>
             </div>
 
