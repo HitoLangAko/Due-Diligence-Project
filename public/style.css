@@ -3719,3 +3719,105 @@ body[data-role="compliance"] #vendorAssessmentPage .vendor-assessment-card {
     width: 100%;
   }
 }
+
+/* Fix Sign-off upload and action buttons */
+#signoffPage .signature-upload-btn {
+  width: 100% !important;
+  min-height: 64px !important;
+  padding: 0 22px !important;
+  border: 2px dashed #9db0c9 !important;
+  border-radius: 16px !important;
+  background: #f8fafc !important;
+  color: #334155 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 12px !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  cursor: pointer !important;
+  box-shadow: none !important;
+  transition: all 0.2s ease !important;
+  overflow: hidden !important;
+}
+
+#signoffPage .signature-upload-btn span,
+#signoffPage #signatureFileName {
+  color: #334155 !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+}
+
+#signoffPage .signature-upload-btn i {
+  color: #2f66e8 !important;
+  font-size: 18px !important;
+}
+
+#signoffPage .signature-upload-btn:hover {
+  background: #eef6ff !important;
+  border-color: #2f66e8 !important;
+  color: #2f66e8 !important;
+}
+
+#signoffPage .signature-upload-btn:hover span,
+#signoffPage .signature-upload-btn:hover i {
+  color: #2f66e8 !important;
+}
+
+/* Make sign-off buttons aligned and professional */
+#signoffPage .button-row,
+#signoffPage .form-actions,
+#signoffPage .signoff-actions {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 18px !important;
+  margin-top: 46px !important;
+}
+
+#signoffPage #cancelSignoffBtn,
+#signoffPage .cancel-btn {
+  width: 180px !important;
+  height: 58px !important;
+  border: none !important;
+  border-radius: 15px !important;
+  background: #2f66e8 !important;
+  color: #ffffff !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 10px 22px rgba(47, 102, 232, 0.22) !important;
+}
+
+#signoffPage button[type="submit"],
+#signoffPage .submit-signoff-btn {
+  width: 200px !important;
+  height: 58px !important;
+  border: none !important;
+  border-radius: 15px !important;
+  background: #10b981 !important;
+  color: #ffffff !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 10px 22px rgba(16, 185, 129, 0.22) !important;
+}
+
+#signoffPage #cancelSignoffBtn:hover,
+#signoffPage .cancel-btn:hover {
+  background: #2456c7 !important;
+  transform: translateY(-1px);
+}
+
+#signoffPage button[type="submit"]:hover,
+#signoffPage .submit-signoff-btn:hover {
+  background: #059669 !important;
+  transform: translateY(-1px);
+}
