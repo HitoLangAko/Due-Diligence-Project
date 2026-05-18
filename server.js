@@ -1513,12 +1513,16 @@ function createSupplierDDFSheet(workbook, assessment, answers) {
   sheet.getRow(1).height = 24;
 
   const infoRows = [
-    ["Company Name:", assessment.company_name || ""],
-    ["Company Website:", assessment.company_website || ""],
-    ["Product/ Services Offered to <company>:", assessment.product_services_offered || ""],
-    ["Purpose: For Accreditation/Re-accreditation, New contract or Renewal:", assessment.purpose || ""],
-    ["Contact Person Name / Email Address / Phone Number", `${assessment.contact_person_name || ""} ${assessment.contact_email || ""} ${assessment.contact_phone || ""}`.trim()],
-    ["Date of Assessment:", formatExcelDate(assessment.assessment_date)]
+    ["Assessment ID:", selectedAssessment.assessment_code || `VA-${selectedAssessment.assessment_id || ""}`],
+    ["Assessment Date:", formatExcelDate(selectedAssessment.assessment_date)],
+    ["Company Name:", selectedAssessment.company_name || ""],
+    ["Company Website:", selectedAssessment.company_website || ""],
+    ["Product/ Services Offered to <company>:", selectedAssessment.product_services_offered || ""],
+    ["Purpose: For Accreditation/Re-accreditation, New contract or Renewal:", selectedAssessment.purpose || ""],
+    [
+      "Contact Person Name / Email Address / Phone Number:",
+      `${selectedAssessment.contact_person_name || ""} ${selectedAssessment.contact_email || ""} ${selectedAssessment.contact_phone || ""}`.trim()
+    ]
   ];
 
   let row = 2;
@@ -1876,32 +1880,27 @@ app.get("/admin/export-excel", requireRole("admin"), async (req, res) => {
       assessmentLimit = "";
     }
 
-    const assessments = await runQuery(
-      `
-        SELECT
-          va.assessment_id,
-          va.assessment_code,
-          va.vendor_id,
-          va.purpose,
-          va.assessment_date,
-          va.overall_status,
-          va.created_at,
-          v.company_name,
-          v.company_website,
-          v.product_services_offered,
-          v.contact_person_name,
-          v.contact_email,
-          v.contact_phone,
-          u.full_name AS created_by
-        FROM vendor_assessments va
-        JOIN vendors v ON va.vendor_id = v.vendor_id
-        LEFT JOIN users u ON va.created_by_user_id = u.user_id
-        ${assessmentWhere}
-        ORDER BY va.created_at DESC
-        ${assessmentLimit}
-      `,
-      assessmentParams
-    );
+    const assessments = await runQuery(`
+      SELECT
+        va.assessment_id,
+        va.assessment_code,
+        va.vendor_id,
+        va.purpose,
+        va.assessment_date,
+        va.overall_status,
+        va.created_at,
+        v.company_name,
+        v.company_website,
+        v.product_services_offered,
+        v.contact_person_name,
+        v.contact_email,
+        v.contact_phone,
+        u.full_name AS created_by
+      FROM vendor_assessments va
+      JOIN vendors v ON va.vendor_id = v.vendor_id
+      LEFT JOIN users u ON va.created_by_user_id = u.user_id
+      ORDER BY va.created_at DESC
+    `);
 
     const selectedAssessment = assessments[0] || {};
     const selectedAssessmentId = selectedAssessment.assessment_id || requestedAssessmentId || null;
