@@ -108,7 +108,6 @@ const departmentQuestionGroups = {
         "Do you have a mechanism to address client complaints against an authorized agent or representative? Please provide an overview of your complaint handling.",
         "How do you ensure that client complaints are addressed quickly and adequately?",
         "Do you have a team or individuals dedicated to managing consumer complaints? If so, lay out the position and qualifications.",
-        "Does the vendor comply with consumer protection requirements?",
         "What is a typical time frame for acknowledging and addressing a customer complaint?",
         "How do you track and document customer complaints?",
       ]
