@@ -3491,14 +3491,14 @@ body[data-role="compliance"] #vendorAssessmentPage .vendor-assessment-card {
 .validify-logo-shield::after {
   content: "";
   position: absolute;
-  left: 22px;
-  top: 38px;
-  width: 28px;
-  height: 15px;
+  left: 24px;
+  top: 32px;
+  width: 31px;
+  height: 18px;
   border-left: 7px solid #ffffff;
   border-bottom: 7px solid #ffffff;
   transform: rotate(-45deg);
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 /* Validify text */
