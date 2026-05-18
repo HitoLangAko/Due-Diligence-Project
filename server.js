@@ -52,12 +52,12 @@ const assessmentCodePrefixes = {
 const vendorInformationQuestions = [
   "Type of service/s deployment model would this vendor implement for the company? Describe briefly.",
   "Vendor's clients.",
-  "Vendor's local offices.",
-  "Vendor's HQ location.",
-  "Number of years the vendor has been in the business.",
+  "Vendor's Local Offices.",
+  "Vendor's HQ Location.",
+  "Number of years has been in the business.",
   "Please describe your ability and capacity to perform the outsourced activities effectively and reliably.",
-  "What is your support turnaround time?",
-  "Vendor's clients and actual performance, such as certifications, accreditations, performance rating, and industries your clients belong to.",
+  "What is your Support Turnaround time?",
+  "Vendor's clients and actual performance, such as certifications, accreditations, performance rating, and what industries your clients belong to.",
   "To whom are issues escalated? Please provide name, email address, and contact number.",
   "Have there been any instances where you were unable to deliver services as per the agreed terms? If yes, please provide details and explanations.",
   "Please provide the cost of this particular engagement."
