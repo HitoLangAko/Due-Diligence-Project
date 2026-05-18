@@ -2927,3 +2927,16 @@ body[data-role="compliance"] #addVendorPage {
   font-weight: 900;
   color: #1e3a8a;
 }
+
+/* Admin Assessment Review status */
+.status-ready {
+  background: #bbf7d0 !important;
+  color: #166534 !important;
+  border-color: #22c55e !important;
+}
+
+.status-pending {
+  background: #fed7aa !important;
+  color: #7c2d12 !important;
+  border-color: #fb923c !important;
+}

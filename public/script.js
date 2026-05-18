@@ -1114,33 +1114,70 @@ function populateAssessmentReviewTabs() {
   }
 }
 
-function updateAssessmentReviewDetails() {
-  if (!assessmentReviewComment) return;
+function getAssessmentReviewDisplayStatus(assessment) {
+  const departments = assessment?.department_assessments || [];
 
+  const requiredDepartments = ["management", "it", "compliance", "dpo", "hr", "infosec"];
+
+  const completedDepartments = requiredDepartments.filter((role) => {
+    const dept = departments.find((item) => item.department_role === role);
+    return dept && ["Pending Admin Approval", "Approved", "Completed"].includes(dept.department_status);
+  });
+
+  if (completedDepartments.length === requiredDepartments.length) {
+    return "Ready";
+  }
+
+  return "Pending";
+}
+
+function updateAssessmentReviewDetails() {
   if (!selectedReviewAssessment) {
     if (assessmentReviewCode) assessmentReviewCode.textContent = "—";
     if (assessmentReviewVendorName) assessmentReviewVendorName.textContent = "—";
     if (assessmentReviewPurpose) assessmentReviewPurpose.textContent = "—";
     if (assessmentReviewDate) assessmentReviewDate.textContent = "—";
-    if (assessmentReviewStatus) assessmentReviewStatus.textContent = "Pending";
     if (assessmentReviewServices) assessmentReviewServices.textContent = "—";
-    assessmentReviewComment.textContent = "Select a vendor assessment to view company comments here.";
+
+    if (assessmentReviewStatus) {
+      assessmentReviewStatus.textContent = "Pending";
+      assessmentReviewStatus.className = "status-pill status-pending";
+    }
+
     if (finalizeAssessmentBtn) finalizeAssessmentBtn.disabled = true;
     return;
   }
 
-  if (assessmentReviewCode) assessmentReviewCode.textContent = selectedReviewAssessment.assessment_code || "—";
-  if (assessmentReviewVendorName) assessmentReviewVendorName.textContent = selectedReviewAssessment.company_name || "—";
-  if (assessmentReviewPurpose) assessmentReviewPurpose.textContent = selectedReviewAssessment.purpose || "—";
-  if (assessmentReviewDate) assessmentReviewDate.textContent = formatDate(selectedReviewAssessment.assessment_date);
-  if (assessmentReviewStatus) {
-    assessmentReviewStatus.textContent = selectedReviewAssessment.overall_status || "Pending";
-    assessmentReviewStatus.className = `status-pill ${statusClass(selectedReviewAssessment.overall_status)}`;
-  }
-  if (assessmentReviewServices) assessmentReviewServices.textContent = selectedReviewAssessment.product_services_offered || "—";
-  assessmentReviewComment.textContent = selectedReviewAssessment.company_comment || "No company comment available.";
+  const displayStatus = getAssessmentReviewDisplayStatus(selectedReviewAssessment);
 
-  if (finalizeAssessmentBtn) finalizeAssessmentBtn.disabled = false;
+  if (assessmentReviewCode) {
+    assessmentReviewCode.textContent = selectedReviewAssessment.assessment_code || "—";
+  }
+
+  if (assessmentReviewVendorName) {
+    assessmentReviewVendorName.textContent = selectedReviewAssessment.company_name || "—";
+  }
+
+  if (assessmentReviewPurpose) {
+    assessmentReviewPurpose.textContent = selectedReviewAssessment.purpose || "—";
+  }
+
+  if (assessmentReviewDate) {
+    assessmentReviewDate.textContent = formatDate(selectedReviewAssessment.assessment_date);
+  }
+
+  if (assessmentReviewServices) {
+    assessmentReviewServices.textContent = selectedReviewAssessment.product_services_offered || "—";
+  }
+
+  if (assessmentReviewStatus) {
+    assessmentReviewStatus.textContent = displayStatus;
+    assessmentReviewStatus.className = `status-pill ${displayStatus === "Ready" ? "status-ready" : "status-pending"}`;
+  }
+
+  if (finalizeAssessmentBtn) {
+    finalizeAssessmentBtn.disabled = displayStatus !== "Ready";
+  }
 }
 
 async function finalizeAssessment() {
