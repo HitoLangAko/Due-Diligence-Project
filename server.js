@@ -2363,6 +2363,22 @@ function createInformationSecuritySheet(workbook, assessment, answers) {
   });
 }
 
+function getSignatureImageExtension(filePath) {
+  const ext = path.extname(filePath || "").toLowerCase();
+
+  if (ext === ".png") return "png";
+  if (ext === ".jpg" || ext === ".jpeg") return "jpeg";
+
+  return null;
+}
+
+function getSignaturePhysicalPath(signatureFilePath) {
+  if (!signatureFilePath) return null;
+
+  const cleanPath = String(signatureFilePath).replace(/^\/+/, "");
+  return path.join(__dirname, "public", cleanPath);
+}
+
 function createSignoffSheet(workbook, signoffs) {
   const sheet = workbook.addWorksheet("Sign-off Sheet");
 
@@ -2420,15 +2436,49 @@ function createSignoffSheet(workbook, signoffs) {
 
   const signoffMap = {};
 
-  signoffs.forEach((item) => {
+  (signoffs || []).forEach((item) => {
     signoffMap[normalizeSectionName(item.role_name)] = item;
   });
 
-  function getSigner(role) {
-    return signoffMap[normalizeSectionName(role)]?.signer_name || "";
+  function getSignoff(role) {
+    return signoffMap[normalizeSectionName(role)] || null;
   }
 
-  function signatureBlock(roleRange, nameRange, roleLabel, signerName) {
+  function addSignatureImage(signoff, imageRange) {
+    if (!signoff || !signoff.signature_file_path) return false;
+
+    const physicalPath = getSignaturePhysicalPath(signoff.signature_file_path);
+    const extension = getSignatureImageExtension(physicalPath);
+
+    if (!physicalPath || !extension || !fs.existsSync(physicalPath)) {
+      return false;
+    }
+
+    const [startCell, endCell] = imageRange.split(":");
+    const start = sheet.getCell(startCell);
+    const end = sheet.getCell(endCell);
+
+    const imageId = workbook.addImage({
+      filename: physicalPath,
+      extension
+    });
+
+    sheet.addImage(imageId, {
+      tl: {
+        col: start.col - 1 + 0.15,
+        row: start.row - 1 + 0.20
+      },
+      br: {
+        col: end.col - 0.15,
+        row: end.row - 0.35
+      },
+      editAs: "oneCell"
+    });
+
+    return true;
+  }
+
+  function signatureBlock(roleRange, nameRange, roleLabel, signoff) {
     sheet.mergeCells(roleRange);
     sheet.mergeCells(nameRange);
 
@@ -2436,7 +2486,17 @@ function createSignoffSheet(workbook, signoffs) {
     const nameCell = sheet.getCell(nameRange.split(":")[0]);
 
     roleCell.value = roleLabel;
-    nameCell.value = signerName;
+
+    const signerName = signoff?.signer_name || "";
+    const hasSignatureImage = addSignatureImage(signoff, nameRange);
+
+    if (hasSignatureImage) {
+      nameCell.value = signerName
+        ? `\n\n\n\n${signerName}`
+        : "";
+    } else {
+      nameCell.value = signerName || signoff?.signature_file_name || "";
+    }
 
     styleRange(sheet, roleRange, {
       font: { bold: true, size: 9 },
@@ -2447,17 +2507,17 @@ function createSignoffSheet(workbook, signoffs) {
 
     styleRange(sheet, nameRange, {
       font: { bold: true, size: 10 },
-      alignment: { horizontal: "center", vertical: "middle", wrapText: true },
+      alignment: { horizontal: "center", vertical: "bottom", wrapText: true },
       border: mediumBorder()
     });
   }
 
-  signatureBlock("C6:C10", "D6:F10", "IT", getSigner("IT"));
-  signatureBlock("H6:H10", "I6:K10", "COMPLIANCE", getSigner("Compliance"));
-  signatureBlock("C12:C16", "D12:F16", "INFOSEC", getSigner("InfoSec"));
-  signatureBlock("H12:H16", "I12:K16", "DPO", getSigner("DPO"));
-  signatureBlock("C19:C23", "D19:F23", "RISK\nMANAGEMENT\nOFFICER", getSigner("Management"));
-  signatureBlock("H19:H23", "I19:K23", "HR", getSigner("HR"));
+  signatureBlock("C6:C10", "D6:F10", "IT", getSignoff("IT"));
+  signatureBlock("H6:H10", "I6:K10", "COMPLIANCE", getSignoff("Compliance"));
+  signatureBlock("C12:C16", "D12:F16", "INFOSEC", getSignoff("InfoSec"));
+  signatureBlock("H12:H16", "I12:K16", "DPO", getSignoff("DPO"));
+  signatureBlock("C19:C23", "D19:F23", "RISK\nMANAGEMENT\nOFFICER", getSignoff("Management"));
+  signatureBlock("H19:H23", "I19:K23", "HR", getSignoff("HR"));
 
   sheet.mergeCells("C25:L26");
   sheet.getCell("C25").value =
@@ -2576,27 +2636,30 @@ app.get("/admin/export-excel", requireRole("admin"), async (req, res) => {
     );
 
     const signoffs = await runQuery(
-      `
-        SELECT
-          s.signoff_id,
-          s.assessment_id,
-          s.department_assessment_id,
-          s.role_name,
-          s.signer_name,
-          s.signoff_status,
-          s.signed_at,
-          u.full_name AS created_by
-        FROM sign_offs s
-        LEFT JOIN department_assessments da
-          ON s.department_assessment_id = da.department_assessment_id
-        LEFT JOIN users u
-          ON s.created_by_user_id = u.user_id
-        WHERE s.assessment_id = ?
-        OR da.assessment_id = ?
-        ORDER BY s.created_at DESC
-      `,
-      [selectedAssessmentId, selectedAssessmentId]
-    );
+        `
+          SELECT
+            s.signoff_id,
+            s.assessment_id,
+            s.department_assessment_id,
+            s.role_name,
+            s.signer_name,
+            s.signoff_status,
+            s.signature_file_name,
+            s.signature_file_path,
+            s.signed_at,
+            s.created_at,
+            u.full_name AS created_by
+          FROM sign_offs s
+          LEFT JOIN department_assessments da
+            ON s.department_assessment_id = da.department_assessment_id
+          LEFT JOIN users u
+            ON s.created_by_user_id = u.user_id
+          WHERE s.assessment_id = ?
+          OR da.assessment_id = ?
+          ORDER BY s.created_at DESC
+        `,
+        [selectedAssessmentId, selectedAssessmentId]
+      );
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = "Validify";

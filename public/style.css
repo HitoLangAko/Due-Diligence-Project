@@ -3427,3 +3427,25 @@ body[data-role="compliance"] #vendorAssessmentPage .vendor-assessment-card {
   height: 100%;
   object-fit: cover;
 }
+
+.signature-upload-btn {
+  width: 100%;
+  min-height: 58px;
+  border-radius: 12px;
+  background: #94a3b8;
+  color: #ffffff;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.signature-upload-btn:hover {
+  background: #64748b;
+}
+
+.signature-upload-btn i {
+  color: #ffffff;
+}
