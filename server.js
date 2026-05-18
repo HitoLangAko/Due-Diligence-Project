@@ -439,6 +439,7 @@ async function initDatabase() {
   await addColumnIfMissing("sign_offs", "department_assessment_id", "INT NULL");
   await addColumnIfMissing("sign_offs", "signature_file_path", "VARCHAR(255) NULL");
   await addColumnIfMissing("sign_offs", "created_by_user_id", "INT NULL");
+  await addColumnIfMissing("sign_offs", "created_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
 
   console.log("Database tables checked.");
 }
