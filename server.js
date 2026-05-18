@@ -1382,6 +1382,33 @@ function formatExcelDate(value) {
   });
 }
 
+function estimateTextLines(value, charactersPerLine) {
+  const text = String(value || "").trim();
+
+  if (!text) {
+    return 1;
+  }
+
+  return text.split(/\r?\n/).reduce((total, line) => {
+    const cleanLine = line.trim();
+    return total + Math.max(1, Math.ceil(cleanLine.length / charactersPerLine));
+  }, 0);
+}
+
+function calculateRowHeight(items, options = {}) {
+  const minHeight = options.minHeight || 54;
+  const maxHeight = options.maxHeight || 180;
+  const lineHeight = options.lineHeight || 15;
+
+  const maxLines = items.reduce((highest, item) => {
+    const lines = estimateTextLines(item.text, item.charactersPerLine || 60);
+    return Math.max(highest, lines);
+  }, 1);
+
+  return Math.min(maxHeight, Math.max(minHeight, maxLines * lineHeight + 14));
+}
+
+
 function answerComment(item) {
   const parts = [];
 
@@ -1461,13 +1488,13 @@ function createSupplierDDFSheet(workbook, assessment, answers) {
     fitToHeight: 0
   };
 
-  sheet.properties.defaultRowHeight = 22;
+  sheet.properties.defaultRowHeight = 30;
   sheet.views = [];
 
   sheet.columns = [
-    { width: 68 },
-    { width: 32 },
-    { width: 32 }
+    { width: 86 },
+    { width: 36 },
+    { width: 36 }
   ];
 
   const titleFill = "FF1F4E79";
@@ -1573,10 +1600,21 @@ function createSupplierDDFSheet(workbook, assessment, answers) {
     row++;
 
     sectionRows.forEach((item) => {
-      sheet.getCell(`A${row}`).value = item.question_text || "";
-      sheet.getCell(`B${row}`).value = item.response || "";
-      sheet.getCell(`C${row}`).value = answerComment(item);
-      sheet.getRow(row).height = 44;
+      const commentText = answerComment(item);
+      const questionText = item.question_text || "";
+      const responseText = item.response || "";
+
+      sheet.getCell(`A${row}`).value = questionText;
+      sheet.getCell(`B${row}`).value = responseText;
+      sheet.getCell(`C${row}`).value = commentText;
+      sheet.getRow(row).height = calculateRowHeight(
+        [
+          { text: questionText, charactersPerLine: 78 },
+          { text: responseText, charactersPerLine: 32 },
+          { text: commentText, charactersPerLine: 32 }
+        ],
+        { minHeight: 62, maxHeight: 220, lineHeight: 15 }
+      );
 
       setCellStyle(sheet.getCell(`A${row}`), {
         font: { italic: true, size: 9 },
@@ -1612,14 +1650,14 @@ function createInformationSecuritySheet(workbook, assessment, answers) {
     fitToHeight: 0
   };
 
-  sheet.properties.defaultRowHeight = 22;
+  sheet.properties.defaultRowHeight = 30;
   sheet.views = [];
 
   sheet.columns = [
-    { width: 72 },
-    { width: 30 },
-    { width: 30 },
-    { width: 24 }
+    { width: 86 },
+    { width: 34 },
+    { width: 36 },
+    { width: 28 }
   ];
 
   const infoSecRows = buildExportRowsForRole("infosec", answers);
@@ -1668,11 +1706,24 @@ function createInformationSecuritySheet(workbook, assessment, answers) {
       lastSection = sectionName;
     }
 
-    sheet.getCell(`A${row}`).value = item.question_text || "";
-    sheet.getCell(`B${row}`).value = item.response || "";
-    sheet.getCell(`C${row}`).value = item.explanation || "";
-    sheet.getCell(`D${row}`).value = item.artifact_name || "";
-    sheet.getRow(row).height = 42;
+    const questionText = item.question_text || "";
+    const responseText = item.response || "";
+    const explanationText = item.explanation || "";
+    const artifactText = item.artifact_name || "";
+
+    sheet.getCell(`A${row}`).value = questionText;
+    sheet.getCell(`B${row}`).value = responseText;
+    sheet.getCell(`C${row}`).value = explanationText;
+    sheet.getCell(`D${row}`).value = artifactText;
+    sheet.getRow(row).height = calculateRowHeight(
+      [
+        { text: questionText, charactersPerLine: 78 },
+        { text: responseText, charactersPerLine: 30 },
+        { text: explanationText, charactersPerLine: 32 },
+        { text: artifactText, charactersPerLine: 24 }
+      ],
+      { minHeight: 58, maxHeight: 220, lineHeight: 15 }
+    );
 
     ["A", "B", "C", "D"].forEach((col) => {
       setCellStyle(sheet.getCell(`${col}${row}`), {
