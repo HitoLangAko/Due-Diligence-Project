@@ -3122,3 +3122,13 @@ html body[data-role="employee"] #vendorAssessmentPage #submitDepartmentFormBtn {
   font-size: 13px;
   font-weight: 600;
 }
+
+/* Hide Create Vendor Assessment card for all department users */
+body[data-role="it"] #vendorAssessmentPage .vendor-assessment-card,
+body[data-role="infosec"] #vendorAssessmentPage .vendor-assessment-card,
+body[data-role="management"] #vendorAssessmentPage .vendor-assessment-card,
+body[data-role="dpo"] #vendorAssessmentPage .vendor-assessment-card,
+body[data-role="hr"] #vendorAssessmentPage .vendor-assessment-card,
+body[data-role="compliance"] #vendorAssessmentPage .vendor-assessment-card {
+  display: none !important;
+}

@@ -451,6 +451,12 @@ function applyRoleLayout() {
   const initial = label.charAt(0).toUpperCase();
   document.body.dataset.role = currentRole;
 
+  const vendorAssessmentCard = document.querySelector("#vendorAssessmentPage .vendor-assessment-card");
+
+  if (vendorAssessmentCard) {
+    vendorAssessmentCard.classList.toggle("hidden", isDepartmentRole());
+  }
+
   if (accountAvatar) accountAvatar.textContent = initial;
   if (accountMenuAvatar) accountMenuAvatar.textContent = initial;
   if (accountUserName) accountUserName.textContent = currentUser.full_name || "Account";
