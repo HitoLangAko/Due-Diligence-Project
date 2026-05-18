@@ -49,16 +49,11 @@ const assessmentCodePrefixes = {
 };
 
 const resiliencyQuestions = [
-  "Does the vendor have a documented Business Continuity Plan?",
-  "Does the vendor have a documented Disaster Recovery Plan?",
-  "Does the vendor perform regular backup procedures?",
-  "Does the vendor test recovery procedures regularly?",
-  "Does the vendor have an incident escalation process?",
-  "Does the vendor have alternative facilities, systems, or processes in case of disruption?",
-  "Does the vendor define Recovery Time Objective and Recovery Point Objective?",
-  "Does the vendor maintain service availability during emergencies?",
-  "Does the vendor have communication procedures for business disruptions?",
-  "Does the vendor review and update its resiliency plan regularly?"
+  "What is the specific alternate site documented in the BCP?",
+  "Have you conducted BCP testing?",
+  "Provide the approved Business Continuity Plan.",
+  "Provide results of the most recent IT DRP and BCP tests.",
+  "Are there action plans in place for corrective actions discovered during the test?"
 ];
 
 const departmentQuestionGroups = {
@@ -110,14 +105,12 @@ const departmentQuestionGroups = {
     {
       section_name: "Consumer",
       questions: [
-        "Does the vendor directly or indirectly handle consumer or customer data?",
-        "Does the vendor have procedures for protecting customer information?",
-        "Does the vendor have a process for handling customer complaints or concerns?",
+        "Do you have a mechanism to address client complaints against an authorized agent or representative? Please provide an overview of your complaint handling.",
+        "How do you ensure that client complaints are addressed quickly and adequately?",
+        "Do you have a team or individuals dedicated to managing consumer complaints? If so, lay out the position and qualifications.",
         "Does the vendor comply with consumer protection requirements?",
-        "Does the vendor provide clear service terms, limitations, and responsibilities?",
-        "Does the vendor have procedures for notifying the company about customer-impacting incidents?",
-        "Does the vendor avoid misleading or unfair practices in service delivery?",
-        "Does the vendor maintain proper records related to consumer or customer transactions?"
+        "What is a typical time frame for acknowledging and addressing a customer complaint?",
+        "How do you track and document customer complaints?",
       ]
     },
     {
