@@ -70,17 +70,46 @@
       </div>
 
       <div class="sidebar-footer">
-        <div class="account-card">
-          <div class="account-avatar">V</div>
-          <div>
-            <strong id="accountName">Vendor Account</strong>
-            <small>Vendor Portal</small>
+        <button class="vendor-account-button" type="button" id="vendorAccountToggle">
+          <div class="vendor-account-left">
+            <div class="account-avatar" id="accountAvatar">V</div>
+            <div>
+              <strong id="accountName">Vendor Account</strong>
+              <small id="accountRoleText">Vendor Portal</small>
+            </div>
           </div>
-        </div>
-        <button class="logout-btn" id="logoutBtn" type="button">
-          <i class="fa-solid fa-right-from-bracket"></i>
-          Logout
+          <i class="fa-solid fa-chevron-right account-chevron"></i>
         </button>
+
+        <div class="vendor-account-menu hidden" id="vendorAccountMenu">
+          <div class="vendor-account-menu-head">
+            <div class="account-avatar account-menu-avatar" id="accountMenuAvatar">V</div>
+            <div class="account-menu-user">
+              <strong id="accountMenuName">Vendor Account</strong>
+              <small id="accountMenuRoleText">Vendor Portal</small>
+            </div>
+            <i class="fa-solid fa-chevron-right"></i>
+          </div>
+
+          <div class="account-menu-line"></div>
+
+          <button type="button" class="vendor-account-menu-action" id="vendorProfileBtn">
+            <i class="fa-solid fa-user"></i>
+            <span>Profile</span>
+          </button>
+
+          <button type="button" class="vendor-account-menu-action" id="vendorHelpBtn">
+            <i class="fa-solid fa-circle-question"></i>
+            <span>Help</span>
+          </button>
+
+          <div class="account-menu-line"></div>
+
+          <button class="vendor-menu-logout" id="logoutBtn" type="button">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span>Logout</span>
+          </button>
+        </div>
       </div>
     </aside>
 
