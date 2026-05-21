@@ -29,9 +29,21 @@ function clearMessage() {
   messageBox.className = "message";
 }
 
+function getRedirectPage(role) {
+  if (role === "vendor") return "vendor.html";
+  if (role === "employee") return "employee.html";
+
+  if (["it", "infosec", "management", "dpo", "hr", "compliance"].includes(role)) {
+    return "department.html";
+  }
+
+  return "login.html";
+}
+
 async function api(url, options = {}) {
   const response = await fetch(url, {
     ...options,
+    credentials: "same-origin",
     headers: {
       "Content-Type": "application/json",
       ...(options.headers || {})
@@ -42,7 +54,7 @@ async function api(url, options = {}) {
 
   try {
     data = await response.json();
-  } catch (error) {
+  } catch (_error) {
     data = null;
   }
 
@@ -64,12 +76,18 @@ if (loginForm) {
     };
 
     try {
-      await api("/login", {
+      const data = await api("/login", {
         method: "POST",
         body: JSON.stringify(payload)
       });
 
-      window.location.href = "index.html";
+      const role = data?.user?.role;
+
+      if (!role) {
+        throw new Error("Login succeeded, but no role was returned.");
+      }
+
+      window.location.href = getRedirectPage(role);
     } catch (error) {
       showMessage(error.message || "Failed to login.");
     }
@@ -94,9 +112,9 @@ if (registerForm) {
         body: JSON.stringify(payload)
       });
 
-    registerForm.reset();
-    document.querySelector('[data-auth-tab="login"]').click();
-    showMessage(data.message || "Account created. Please check your email.", "success");
+      registerForm.reset();
+      document.querySelector('[data-auth-tab="login"]').click();
+      showMessage(data.message || "Account created. You can now log in.", "success");
     } catch (error) {
       showMessage(error.message || "Failed to register account.");
     }
