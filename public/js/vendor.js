@@ -745,6 +745,42 @@ function setupEvents() {
     localStorage.setItem(STORAGE_KEYS.darkMode, document.body.classList.contains("dark-mode") ? "1" : "0");
   });
 
+  const vendorAccountToggle = document.getElementById("vendorAccountToggle");
+  const vendorAccountMenu = document.getElementById("vendorAccountMenu");
+
+  if (vendorAccountToggle && vendorAccountMenu) {
+    vendorAccountToggle.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      vendorAccountMenu.classList.toggle("hidden");
+      vendorAccountToggle.classList.toggle("active");
+    });
+
+    vendorAccountMenu.addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
+
+    document.addEventListener("click", () => {
+      vendorAccountMenu.classList.add("hidden");
+      vendorAccountToggle.classList.remove("active");
+    });
+  }
+
+  document.getElementById("vendorProfileBtn")?.addEventListener("click", () => {
+    vendorAccountMenu?.classList.add("hidden");
+    vendorAccountToggle?.classList.remove("active");
+    if (typeof showPage === "function") showPage("credentials");
+    if (typeof showToast === "function") showToast("Profile opened. Update your vendor credentials here.");
+  });
+
+  document.getElementById("vendorHelpBtn")?.addEventListener("click", () => {
+    vendorAccountMenu?.classList.add("hidden");
+    vendorAccountToggle?.classList.remove("active");
+    if (typeof showToast === "function") {
+      showToast("Help: complete credentials, create an assessment, answer all sections, then submit.");
+    }
+  });
+
   document.getElementById("logoutBtn")?.addEventListener("click", validifyLogoutToLogin);
 }
 
