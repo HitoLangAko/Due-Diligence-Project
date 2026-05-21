@@ -738,6 +738,45 @@ function setupEvents() {
   });
   document.getElementById("submitNextBtn")?.addEventListener("click", goToNextOrSubmit);
 
+  const vendorAccountToggle = document.getElementById("vendorAccountToggle") || document.getElementById("accountToggle");
+  const vendorAccountMenu = document.getElementById("vendorAccountMenu") || document.getElementById("accountMenu");
+  const vendorProfileBtn = document.getElementById("vendorProfileBtn") || document.getElementById("profileBtn");
+  const vendorHelpBtn = document.getElementById("vendorHelpBtn") || document.getElementById("helpBtn");
+
+  if (vendorAccountToggle && vendorAccountMenu) {
+    vendorAccountToggle.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      vendorAccountMenu.classList.toggle("hidden");
+      vendorAccountToggle.classList.toggle("active");
+    });
+
+    vendorAccountMenu.addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
+
+    document.addEventListener("click", () => {
+      vendorAccountMenu.classList.add("hidden");
+      vendorAccountToggle.classList.remove("active");
+    });
+  }
+
+  if (vendorProfileBtn) {
+    vendorProfileBtn.addEventListener("click", () => {
+      if (vendorAccountMenu) vendorAccountMenu.classList.add("hidden");
+      if (vendorAccountToggle) vendorAccountToggle.classList.remove("active");
+      showPage("credentials");
+    });
+  }
+
+  if (vendorHelpBtn) {
+    vendorHelpBtn.addEventListener("click", () => {
+      if (vendorAccountMenu) vendorAccountMenu.classList.add("hidden");
+      if (vendorAccountToggle) vendorAccountToggle.classList.remove("active");
+      showToast("For help, contact the Vendor Management & Compliance Officer.");
+    });
+  }
+
   document.getElementById("resetCredentialsBtn")?.addEventListener("click", () => {
     document.getElementById("credentialsForm").reset();
   });
