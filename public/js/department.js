@@ -1,3 +1,21 @@
+// DEPARTMENT PAGE JS - separated from original script.js
+window.VALIDIFY_ALLOWED_ROLES = ["it", "infosec", "management", "dpo", "hr", "compliance"];
+
+const VALIDIFY_ROLE_PAGES = {
+  employee: "employee.html",
+  admin: "employee.html",
+  it: "department.html",
+  infosec: "department.html",
+  management: "department.html",
+  dpo: "department.html",
+  hr: "department.html",
+  compliance: "department.html"
+};
+
+function redirectToRoleHome(role) {
+  window.location.href = VALIDIFY_ROLE_PAGES[role] || "login.html";
+}
+
 let currentUser = null;
 let currentRole = "";
 let employeeRows = [];
@@ -17,14 +35,14 @@ let selectedReportingAssessment = null;
 let assessmentSummaryData = null;
 
 const roleLabels = {
-  employee: "Employee",
+  employee: "Employee / Compliance Officer",
   it: "IT",
   infosec: "InfoSec",
   management: "Management",
   dpo: "DPO",
   hr: "HR",
   compliance: "Compliance",
-  admin: "Admin"
+  admin: "Employee / Compliance Officer"
 };
 
 const departmentRoles = ["it", "infosec", "management", "dpo", "hr", "compliance"];
@@ -158,6 +176,7 @@ function isDepartmentRole(role = currentRole) {
 
 function escapeHTML(value) {
   return String(value ?? "")
+    .replaceAll("Pending Admin Approval", "Pending Compliance Review")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;");
@@ -569,7 +588,7 @@ function updateAssessmentSubmitButtonText() {
 
   submitDepartmentFormText.textContent = currentRole === "employee"
     ? "Submit Vendor Information"
-    : "Submit Department Form to Admin";
+    : "Submit Department Form to Compliance Officer";
 }
 
 async function api(url, options = {}) {
@@ -599,6 +618,14 @@ async function checkLoggedInUser() {
   try {
     currentUser = await api("/me");
     currentRole = currentUser.role;
+
+    if (
+      Array.isArray(window.VALIDIFY_ALLOWED_ROLES) &&
+      !window.VALIDIFY_ALLOWED_ROLES.includes(currentRole)
+    ) {
+      redirectToRoleHome(currentRole);
+      return;
+    }
   } catch (_error) {
     window.location.href = "login.html";
     return;
@@ -637,7 +664,7 @@ function applyRoleLayout() {
     } else if (isDepartmentRole()) {
       roleHelper.textContent = `${label} Console: answer your department form for shared vendor assessments.`;
     } else if (currentRole === "admin") {
-      roleHelper.textContent = "Admin CISO System: monitor all vendors and department reviews.";
+      roleHelper.textContent = "Compliance Officer Portal: monitor vendors and department reviews.";
     }
   }
 
@@ -1173,7 +1200,7 @@ async function createOrStartAssessment() {
       updateAssessmentSubmitButtonText();
       showAssessmentSuccess(
         `Vendor Assessment ${assessment.assessment_code || "created"} created.`,
-        "Assessment created and assigned to departments. Complete the Vendor Information section, then click Submit Vendor Information so Admin can review it and include it in the Excel report."
+        "Assessment created and assigned to departments. Complete the Vendor Information section, then click Submit Vendor Information so the Compliance Officer can review it and include it in the Excel report."
       );
       showToast("Vendor assessment created. You can now submit Vendor Information.");
       return;
@@ -1244,13 +1271,13 @@ async function submitDepartmentForm(event) {
 
   try {
     await api(`/department/assessments/${activeMainAssessment.assessment_id}/submit`, { method: "POST", body: formData });
-    showToast(currentRole === "employee" ? "Vendor Information submitted to Admin." : `${getRoleLabel()} assessment submitted to Admin.`);
+    showToast(currentRole === "employee" ? "Vendor Information submitted to Compliance Officer." : `${getRoleLabel()} assessment submitted to Compliance Officer.`);
     if (currentRole === "employee") {
       await loadEmployeeData();
       await loadEmployeeAssessment(activeMainAssessment.assessment_id);
       showAssessmentSuccess(
         "Vendor Information submitted.",
-        "Vendor Information was sent to Admin for review and will be included in the Excel report."
+        "Vendor Information was saved for Compliance Officer review and will be included in the Excel report."
       );
       showPage("vendor-assessment");
     } else {

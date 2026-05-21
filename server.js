@@ -18,8 +18,7 @@ const allowedRoles = [
   "management",
   "dpo",
   "hr",
-  "compliance",
-  "admin"
+  "compliance"
 ];
 
 const departmentRoles = [
@@ -32,7 +31,7 @@ const departmentRoles = [
 ];
 
 const roleLabels = {
-  employee: "Employee",
+  employee: "Employee / Compliance Officer",
   it: "IT",
   infosec: "InfoSec",
   management: "Management",
@@ -40,6 +39,11 @@ const roleLabels = {
   hr: "HR",
   compliance: "Compliance"
 };
+
+function normalizeUserRole(role) {
+  return role === "admin" ? "employee" : role;
+}
+
 
 const assessmentCodePrefixes = {
   it: "IT",
@@ -337,7 +341,7 @@ async function initDatabase() {
       full_name VARCHAR(150) NOT NULL,
       email VARCHAR(150) NOT NULL UNIQUE,
       password_hash VARCHAR(255) NOT NULL,
-      role ENUM('employee', 'it', 'infosec', 'management', 'dpo', 'hr', 'compliance', 'admin') NOT NULL,
+      role ENUM('employee', 'it', 'infosec', 'management', 'dpo', 'hr', 'compliance') NOT NULL,
       email_verified TINYINT(1) DEFAULT 1,
       verification_token_hash VARCHAR(255) NULL,
       verification_token_expires DATETIME NULL,
@@ -357,9 +361,15 @@ async function initDatabase() {
   await addColumnIfMissing("users", "profile_photo_path", "VARCHAR(255) NULL");
 
   try {
+    await runQuery(`UPDATE users SET role = 'employee' WHERE role = 'admin'`);
+  } catch (error) {
+    console.log("Skipping legacy admin role conversion:", error.message);
+  }
+
+  try {
     await runQuery(`
       ALTER TABLE users MODIFY role ENUM(
-        'employee', 'it', 'infosec', 'management', 'dpo', 'hr', 'compliance', 'admin'
+        'employee', 'it', 'infosec', 'management', 'dpo', 'hr', 'compliance'
       ) NOT NULL
     `);
   } catch (error) {
@@ -657,7 +667,7 @@ app.post("/login", async (req, res) => {
       user_id: user.user_id,
       full_name: user.full_name,
       email: user.email,
-      role: user.role
+      role: normalizeUserRole(user.role)
     };
 
     res.json({ message: "Login successful.", user: req.session.user });
@@ -698,7 +708,8 @@ app.get("/me", async (req, res) => {
 
     req.session.user = {
       ...req.session.user,
-      ...rows[0]
+      ...rows[0],
+      role: normalizeUserRole(rows[0].role)
     };
 
     res.json(req.session.user);
@@ -786,7 +797,8 @@ app.post("/profile", upload.single("profile_photo"), async (req, res) => {
 
     req.session.user = {
       ...req.session.user,
-      ...rows[0]
+      ...rows[0],
+      role: normalizeUserRole(rows[0].role)
     };
 
     res.json({
@@ -807,7 +819,7 @@ app.post("/logout", (req, res) => {
 
 /* VENDOR ROUTES */
 
-app.post("/vendors", requireAnyRole(["employee", ...departmentRoles]), async (req, res) => {
+app.post("/vendors", requireRole("employee"), async (req, res) => {
   const {
     company_name,
     company_website,
@@ -882,7 +894,7 @@ app.get("/vendors/mine", requireAnyRole(["employee", ...departmentRoles]), async
 
 /* MAIN VENDOR ASSESSMENT CREATED BY EMPLOYEE */
 
-app.post("/vendor-assessments", requireAnyRole(["employee", ...departmentRoles]), async (req, res) => {
+app.post("/vendor-assessments", requireRole("employee"), async (req, res) => {
   const { vendor_id, purpose, assessment_date } = req.body;
 
   if (!vendor_id || !purpose || !assessment_date) {
@@ -1263,7 +1275,7 @@ app.post("/department/assessments/:assessment_id/submit", requireAnyRole(["emplo
         `,
         [
           req.session.user.user_id,
-          `${roleLabels[departmentRole] || departmentRole} form submitted to Admin.`,
+          `${roleLabels[departmentRole] || departmentRole} form submitted to Compliance Officer.`,
           assessmentRows[0].vendor_id,
           departmentRole
         ]
@@ -1274,8 +1286,8 @@ app.post("/department/assessments/:assessment_id/submit", requireAnyRole(["emplo
 
     res.json({
       message: departmentRole === "employee"
-        ? "Vendor Information submitted to Admin for approval."
-        : `${roleLabels[departmentRole] || departmentRole} assessment submitted to Admin for approval.`
+        ? "Vendor Information submitted to Compliance Officer for approval."
+        : `${roleLabels[departmentRole] || departmentRole} assessment submitted to Compliance Officer for approval.`
     });
   } catch (error) {
     console.error("Submit department assessment error:", error);
@@ -1470,7 +1482,7 @@ app.patch("/department/reviews/:vendor_id", requireDepartment, async (req, res) 
 
 /* ADMIN ROUTES */
 
-app.get("/admin/vendors", requireRole("admin"), async (_req, res) => {
+app.get("/admin/vendors", requireRole("employee"), async (_req, res) => {
   try {
     const rows = await runQuery(
       `
@@ -1519,7 +1531,7 @@ app.get("/admin/vendors", requireRole("admin"), async (_req, res) => {
   }
 });
 
-app.get("/admin/department-assessments", requireRole("admin"), async (_req, res) => {
+app.get("/admin/department-assessments", requireRole("employee"), async (_req, res) => {
   try {
     const rows = await runQuery(
       `
@@ -1771,7 +1783,7 @@ async function getAdminAssessmentBundle(assessmentId = null) {
   };
 }
 
-app.get("/admin/review-assessments", requireRole("admin"), async (_req, res) => {
+app.get("/admin/review-assessments", requireRole("employee"), async (_req, res) => {
   try {
     const assessments = await runQuery(
       `
@@ -1811,7 +1823,7 @@ app.get("/admin/review-assessments", requireRole("admin"), async (_req, res) => 
   }
 });
 
-app.get("/admin/reporting-signoff", requireRole("admin"), async (req, res) => {
+app.get("/admin/reporting-signoff", requireRole("employee"), async (req, res) => {
   try {
     const bundle = await getAdminAssessmentBundle(req.query.assessment_id || null);
 
@@ -1835,7 +1847,7 @@ app.get("/admin/reporting-signoff", requireRole("admin"), async (req, res) => {
   }
 });
 
-app.get("/admin/assessment-summary", requireRole("admin"), async (req, res) => {
+app.get("/admin/assessment-summary", requireRole("employee"), async (req, res) => {
   try {
     const bundle = await getAdminAssessmentBundle(req.query.assessment_id || null);
 
@@ -1860,7 +1872,7 @@ app.get("/admin/assessment-summary", requireRole("admin"), async (req, res) => {
   }
 });
 
-app.post("/admin/assessments/:assessment_id/finalize", requireRole("admin"), async (req, res) => {
+app.post("/admin/assessments/:assessment_id/finalize", requireRole("employee"), async (req, res) => {
   const assessmentId = req.params.assessment_id;
 
   try {
@@ -1882,7 +1894,7 @@ app.post("/admin/assessments/:assessment_id/finalize", requireRole("admin"), asy
   }
 });
 
-app.post("/admin/assessments/:assessment_id/decision", requireRole("admin"), async (req, res) => {
+app.post("/admin/assessments/:assessment_id/decision", requireRole("employee"), async (req, res) => {
   const assessmentId = req.params.assessment_id;
   const { decision } = req.body;
 
@@ -2555,7 +2567,7 @@ function createSignoffSheet(workbook, signoffs) {
 
 
 
-app.get("/admin/export-excel", requireRole("admin"), async (req, res) => {
+app.get("/admin/export-excel", requireRole("employee"), async (req, res) => {
   try {
     const requestedAssessmentId = req.query.assessment_id
       ? Number(req.query.assessment_id)
@@ -2691,7 +2703,7 @@ app.get("/admin/export-excel", requireRole("admin"), async (req, res) => {
     await workbook.xlsx.write(res);
     res.end();
   } catch (error) {
-    console.error("Admin Excel export error:", error);
+    console.error("Compliance Officer Excel export error:", error);
     res.status(500).json({
       message: "Failed to generate Excel report."
     });
