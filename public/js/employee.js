@@ -1,76 +1,57 @@
-// VALIDIFY SESSION AND BACK-BUTTON SECURITY
-const VALIDIFY_SECURITY_ROLE_PAGES = {
-  vendor: "vendor.html",
-  employee: "employee.html",
-  admin: "employee.html",
-  it: "department.html",
-  infosec: "department.html",
-  management: "department.html",
-  dpo: "department.html",
-  hr: "department.html",
-  compliance: "department.html"
-};
+let VALIDIFY_IS_LOGGING_OUT = false;
 
-let validifyIsLoggingOut = false;
+function lockDashboardBackButton() {
+  if (window.__validifyBackLockInstalled) return;
+  window.__validifyBackLockInstalled = true;
 
-function validifyRedirectToRoleHome(role) {
-  window.location.replace(VALIDIFY_SECURITY_ROLE_PAGES[role] || "login.html");
-}
+  const pushLockState = () => {
+    try {
+      window.history.pushState({ validifyProtectedPage: true }, "", window.location.href);
+    } catch (_error) {}
+  };
 
-function validifyLockDashboardBackButton() {
-  if (!window.history || !window.history.pushState) return;
-
-  window.history.replaceState({ validifyProtected: true }, "", window.location.href);
-  window.history.pushState({ validifyProtected: true }, "", window.location.href);
+  pushLockState();
 
   window.addEventListener("popstate", () => {
-    if (validifyIsLoggingOut) return;
-    window.history.pushState({ validifyProtected: true }, "", window.location.href);
+    if (VALIDIFY_IS_LOGGING_OUT) return;
+    pushLockState();
   });
-}
 
-async function validifyCheckSessionOrRedirect(allowedRoles = []) {
-  try {
-    const response = await fetch("/me", {
-      method: "GET",
-      credentials: "same-origin",
-      cache: "no-store"
-    });
+  window.addEventListener("pageshow", async (event) => {
+    if (!event.persisted || VALIDIFY_IS_LOGGING_OUT) return;
 
-    if (!response.ok) {
+    try {
+      const response = await fetch("/me", { credentials: "same-origin" });
+      if (!response.ok) window.location.replace("login.html");
+    } catch (_error) {
       window.location.replace("login.html");
-      return null;
-    }
-
-    const user = await response.json();
-
-    if (Array.isArray(allowedRoles) && allowedRoles.length && !allowedRoles.includes(user.role)) {
-      validifyRedirectToRoleHome(user.role);
-      return null;
-    }
-
-    return user;
-  } catch (_error) {
-    window.location.replace("login.html");
-    return null;
-  }
-}
-
-function validifyAttachPageShowSessionCheck(allowedRoles = []) {
-  window.addEventListener("pageshow", (event) => {
-    if (event.persisted) {
-      validifyCheckSessionOrRedirect(allowedRoles);
     }
   });
 }
 
-validifyLockDashboardBackButton();
+lockDashboardBackButton();
+
+async function validifyLogoutToLogin() {
+  VALIDIFY_IS_LOGGING_OUT = true;
+
+  try {
+    await fetch("/logout", {
+      method: "POST",
+      credentials: "same-origin"
+    });
+  } catch (error) {
+    console.error("Logout error:", error);
+  }
+
+  sessionStorage.clear();
+  localStorage.removeItem("currentUser");
+  window.location.replace("login.html");
+}
 
 // EMPLOYEE PAGE JS - separated from original script.js
 window.VALIDIFY_ALLOWED_ROLES = ["employee"];
 
 const VALIDIFY_ROLE_PAGES = {
-  vendor: "vendor.html",
   employee: "employee.html",
   admin: "employee.html",
   it: "department.html",
@@ -2224,17 +2205,7 @@ function setupEvents() {
   }
 
   if (logoutBtn) {
-    logoutBtn.addEventListener("click", async () => {
-      validifyIsLoggingOut = true;
-      try {
-        await fetch("/logout", { method: "POST", credentials: "same-origin" });
-      } catch (error) {
-        console.error(error);
-      }
-      sessionStorage.clear();
-      localStorage.removeItem("currentUser");
-      window.location.replace("login.html");
-    });
+    logoutBtn.addEventListener("click", validifyLogoutToLogin);
   }
 
   if (clearVendorFormBtn) {
@@ -2346,7 +2317,6 @@ if (profileForm) {
   if (cancelSignoffBtn) cancelSignoffBtn.addEventListener("click", () => showPage("dashboard"));
 }
 
-validifyAttachPageShowSessionCheck(window.VALIDIFY_ALLOWED_ROLES);
 setupAddVendorForm();
 setupEvents();
 checkLoggedInUser();

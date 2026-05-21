@@ -1,7 +1,7 @@
 const ROLE_PAGE_MAP = {
   vendor: "vendor.html",
   employee: "employee.html",
-  admin: "employee.html", // Legacy admin accounts are treated as Employee / Compliance Officer.
+  admin: "employee.html",
   it: "department.html",
   infosec: "department.html",
   management: "department.html",

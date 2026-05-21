@@ -3,20 +3,15 @@ const registerForm = document.getElementById("registerForm");
 const messageBox = document.getElementById("messageBox");
 const authTitle = document.getElementById("authTitle");
 
-const VALIDIFY_ROLE_PAGES = {
-  vendor: "vendor.html",
-  employee: "employee.html",
-  admin: "employee.html",
-  it: "department.html",
-  infosec: "department.html",
-  management: "department.html",
-  dpo: "department.html",
-  hr: "department.html",
-  compliance: "department.html"
-};
-
 function getRedirectPage(role) {
-  return VALIDIFY_ROLE_PAGES[role] || "login.html";
+  if (role === "vendor") return "vendor.html";
+  if (role === "employee" || role === "admin") return "employee.html";
+
+  if (["it", "infosec", "management", "dpo", "hr", "compliance"].includes(role)) {
+    return "department.html";
+  }
+
+  return "login.html";
 }
 
 function showMessage(message, type = "error") {
@@ -64,7 +59,7 @@ async function redirectIfAlreadyLoggedIn() {
       window.location.replace(getRedirectPage(user.role));
     }
   } catch (_error) {
-    // User is not logged in, stay on login page.
+    // Not logged in. Stay on login page.
   }
 }
 
