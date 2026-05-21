@@ -1,52 +1,78 @@
-let VALIDIFY_IS_LOGGING_OUT = false;
+/* Strong dashboard back-button guard.
+   Keeps logged-in users on their current dashboard even after repeated Back clicks.
+   Logout and role redirects set window.__validifyAllowNavigation = true to bypass this guard. */
+let isLoggingOut = false;
+window.__validifyAllowNavigation = false;
 
-function lockDashboardBackButton() {
-  if (window.__validifyBackLockInstalled) return;
-  window.__validifyBackLockInstalled = true;
+function validifyLockDashboardBackButton() {
+  const lockedUrl = window.location.href;
 
-  const pushLockState = () => {
-    try {
-      window.history.pushState({ validifyProtectedPage: true }, "", window.location.href);
-    } catch (_error) {}
-  };
-
-  pushLockState();
-
-  window.addEventListener("popstate", () => {
-    if (VALIDIFY_IS_LOGGING_OUT) return;
-    pushLockState();
-  });
-
-  window.addEventListener("pageshow", async (event) => {
-    if (!event.persisted || VALIDIFY_IS_LOGGING_OUT) return;
-
-    try {
-      const response = await fetch("/me", { credentials: "same-origin" });
-      if (!response.ok) window.location.replace("login.html");
-    } catch (_error) {
-      window.location.replace("login.html");
-    }
-  });
-}
-
-lockDashboardBackButton();
-
-async function validifyLogoutToLogin() {
-  VALIDIFY_IS_LOGGING_OUT = true;
-
-  try {
-    await fetch("/logout", {
-      method: "POST",
-      credentials: "same-origin"
-    });
-  } catch (error) {
-    console.error("Logout error:", error);
+  function shouldLock() {
+    return !isLoggingOut && !window.__validifyAllowNavigation;
   }
 
-  sessionStorage.clear();
-  localStorage.removeItem("currentUser");
+  function addLockState() {
+    if (!shouldLock()) return;
+
+    try {
+      window.history.pushState(
+        { validifyDashboardLock: true, timestamp: Date.now() },
+        "",
+        lockedUrl
+      );
+    } catch (_error) {}
+  }
+
+  try {
+    window.history.replaceState(
+      { validifyDashboardLock: true, timestamp: Date.now() },
+      "",
+      lockedUrl
+    );
+
+    // Add several lock states so fast repeated Back clicks cannot easily leave the dashboard.
+    for (let index = 0; index < 80; index += 1) {
+      addLockState();
+    }
+  } catch (_error) {}
+
+  window.addEventListener("popstate", () => {
+    if (!shouldLock()) return;
+
+    // Refill immediately and on the next frame to resist rapid Back clicking.
+    addLockState();
+    window.setTimeout(addLockState, 0);
+    window.requestAnimationFrame(addLockState);
+  });
+
+  window.addEventListener("pageshow", () => {
+    if (!shouldLock()) return;
+    window.setTimeout(addLockState, 0);
+  });
+
+  // Small safety refill. This keeps the page protected even after long idle time.
+  window.setInterval(() => {
+    if (!shouldLock()) return;
+    const state = window.history.state || {};
+
+    if (!state.validifyDashboardLock) {
+      addLockState();
+    }
+  }, 1000);
+}
+
+function validifyGoToLogin() {
+  isLoggingOut = true;
+  window.__validifyAllowNavigation = true;
   window.location.replace("login.html");
 }
+
+function validifyGoToPage(page) {
+  window.__validifyAllowNavigation = true;
+  window.location.replace(page || "login.html");
+}
+
+validifyLockDashboardBackButton();
 
 const STORAGE_KEYS = {
   vendors: "validify_mock_vendors",
@@ -745,43 +771,17 @@ function setupEvents() {
     localStorage.setItem(STORAGE_KEYS.darkMode, document.body.classList.contains("dark-mode") ? "1" : "0");
   });
 
-  const vendorAccountToggle = document.getElementById("vendorAccountToggle");
-  const vendorAccountMenu = document.getElementById("vendorAccountMenu");
+  document.getElementById("logoutBtn")?.addEventListener("click", async () => {
+    isLoggingOut = true;
+    window.__validifyAllowNavigation = true;
 
-  if (vendorAccountToggle && vendorAccountMenu) {
-    vendorAccountToggle.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      vendorAccountMenu.classList.toggle("hidden");
-      vendorAccountToggle.classList.toggle("active");
-    });
+    try {
+      await fetch("/logout", { method: "POST", credentials: "same-origin" });
+    } catch (_error) {}
 
-    vendorAccountMenu.addEventListener("click", (event) => {
-      event.stopPropagation();
-    });
-
-    document.addEventListener("click", () => {
-      vendorAccountMenu.classList.add("hidden");
-      vendorAccountToggle.classList.remove("active");
-    });
-  }
-
-  document.getElementById("vendorProfileBtn")?.addEventListener("click", () => {
-    vendorAccountMenu?.classList.add("hidden");
-    vendorAccountToggle?.classList.remove("active");
-    if (typeof showPage === "function") showPage("credentials");
-    if (typeof showToast === "function") showToast("Profile opened. Update your vendor credentials here.");
+    sessionStorage.clear();
+    validifyGoToLogin();
   });
-
-  document.getElementById("vendorHelpBtn")?.addEventListener("click", () => {
-    vendorAccountMenu?.classList.add("hidden");
-    vendorAccountToggle?.classList.remove("active");
-    if (typeof showToast === "function") {
-      showToast("Help: complete credentials, create an assessment, answer all sections, then submit.");
-    }
-  });
-
-  document.getElementById("logoutBtn")?.addEventListener("click", validifyLogoutToLogin);
 }
 
 function boot() {

@@ -59,7 +59,7 @@ async function redirectIfAlreadyLoggedIn() {
       window.location.replace(getRedirectPage(user.role));
     }
   } catch (_error) {
-    // Not logged in. Stay on login page.
+    // User is not logged in. Stay on login page.
   }
 }
 
@@ -82,10 +82,7 @@ document.querySelectorAll("[data-auth-tab]").forEach((button) => {
     if (loginForm) loginForm.classList.toggle("active", tab === "login");
     if (registerForm) registerForm.classList.toggle("active", tab === "register");
 
-    if (authTitle) {
-      authTitle.textContent = tab === "login" ? "Login" : "Create an Account";
-    }
-
+    if (authTitle) authTitle.textContent = tab === "login" ? "Login" : "Create an Account";
     clearMessage();
   });
 });
